@@ -15,7 +15,7 @@ export const generateToken = (userId, res) => {
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
         httpOnly: true, // prevent access from client-side js
         sameSite: "strict", // prevent CSRF attacks
-        secure: ENV.NODE_ENV !== "development" ? false : true, // only send over https in production
+        secure: ENV.NODE_ENV !== "production" ? false : true, // only send over https in production
     });
 
     return token;
