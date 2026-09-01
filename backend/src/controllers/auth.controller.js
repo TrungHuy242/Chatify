@@ -51,12 +51,12 @@ export const signup = async (req, res) => {
 
             // todo: send a welcome email to user
 
-        try {
-            await sendWelcomeEmail(savedUser.email, savedUser.fullName, ENV.CLIENT_URL);
-        } catch (error) {
-            console.error("Error sending welcome email:", error);
-        }
-        
+            try {
+                await sendWelcomeEmail(savedUser.email, savedUser.fullName, ENV.CLIENT_URL);
+            } catch (error) {
+                console.error("Error sending welcome email:", error);
+            }
+
         } else {
             res.status(400).json({ message: "Invalid user data" })
         }
@@ -92,7 +92,7 @@ export const login = async (req, res) => {
             fullName: user.fullName,
             email: user.email,
             profilePic: user.profilePic
-        }); 
+        });
 
     } catch (error) {
         console.error("Error in login controller: ", error);
@@ -118,7 +118,7 @@ export const updateProfile = async (req, res) => {
 
         const updatedUser = await User.findByIdAndUpdate(
             userId,
-            { profilePic: uploadResponse.secure_url }, 
+            { profilePic: uploadResponse.secure_url },
             { new: true }
         );
 
