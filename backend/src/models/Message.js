@@ -25,6 +25,9 @@ const messageSchema = new mongoose.Schema(
     image: {
       type: String,
     },
+    audio: {
+      type: String,
+    },
     status: {
       type: String,
       enum: ["sent", "delivered", "read"],

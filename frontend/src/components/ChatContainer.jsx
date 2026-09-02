@@ -164,8 +164,10 @@ function ChatContainer() {
                                                             <span className="italic">Tin nhắn đã bị thu hồi</span>
                                                         ) : msg.replyTo.text ? (
                                                             msg.replyTo.text
-                                                        ) : (
+                                                        ) : msg.replyTo.image ? (
                                                             <span className="italic">[Hình ảnh]</span>
+                                                        ) : (
+                                                            <span className="italic">[Tin nhắn thoại]</span>
                                                         )}
                                                     </p>
                                                 </div>
@@ -173,6 +175,9 @@ function ChatContainer() {
 
                                             {msg.image && (
                                                 <img src={msg.image} alt="Shared" className="rounded-lg h-48 object-cover" />
+                                            )}
+                                            {msg.audio && (
+                                                <audio src={msg.audio} controls className="h-10 w-[200px]" />
                                             )}
                                             {msg.text && <p className="mt-2">{msg.text}</p>}
                                         </>

@@ -3,30 +3,38 @@ import useKeyboardSound from "../hooks/useKeyboardSound";
 import { useChatStore } from "../store/useChatStore";
 import toast from "react-hot-toast";
 import { useAuthStore } from "../store/useAuthStore";
-import { ImageIcon, SendIcon, XIcon } from "lucide-react";
+import { ImageIcon, SendIcon, XIcon, Mic, Square, Trash2 } from "lucide-react";
 
 function MessageInput() {
     const { playRandomKeyStrokeSound } = useKeyboardSound();
     const [text, setText] = useState("");
     const [imagePreview, setImagePreview] = useState(null);
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingTime, setRecordingTime] = useState(0);
+    const [audioData, setAudioData] = useState(null); // base64
 
     const typingTimeoutRef = useRef(null);
     const fileInputRef = useRef(null);
+    const mediaRecorderRef = useRef(null);
+    const audioChunksRef = useRef([]);
+    const timerRef = useRef(null);
 
     const { sendMessage, isSoundEnabled, selectedUser, replyingTo, clearReplyingTo } = useChatStore();
     const { socket, authUser } = useAuthStore();
 
     const handleSendMessage = (e) => {
-        e.preventDefault();
-        if (!text.trim() && !imagePreview) return;
+        if (e) e.preventDefault();
+        if (!text.trim() && !imagePreview && !audioData) return;
         if (isSoundEnabled) playRandomKeyStrokeSound();
 
         sendMessage({
             text: text.trim(),
             image: imagePreview,
+            audio: audioData,
         });
         setText("");
-        setImagePreview("");
+        setImagePreview(null);
+        setAudioData(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
 
         if (socket && selectedUser) {
@@ -52,6 +60,61 @@ function MessageInput() {
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream);
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    audioChunksRef.current.push(e.data);
+                }
+            };
+
+            mediaRecorder.onstop = () => {
+                const mimeType = mediaRecorderRef.current.mimeType;
+                const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+                const reader = new FileReader();
+                reader.readAsDataURL(audioBlob);
+                reader.onloadend = () => {
+                    setAudioData(reader.result);
+                };
+                stream.getTracks().forEach((track) => track.stop());
+            };
+
+            mediaRecorder.start();
+            setIsRecording(true);
+            setRecordingTime(0);
+
+            timerRef.current = setInterval(() => {
+                setRecordingTime((prev) => prev + 1);
+            }, 1000);
+        } catch (error) {
+            console.error("Error accessing microphone:", error);
+            toast.error("Could not access microphone.");
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+            clearInterval(timerRef.current);
+        }
+    };
+
+    const removeAudio = () => {
+        setAudioData(null);
+    };
+
+    const formatTime = (seconds) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s < 10 ? "0" : ""}${s}`;
+    };
+
     return (
         <div className="p-4 border-t border-slate-700/50 flex flex-col gap-2">
             {replyingTo && (
@@ -66,8 +129,10 @@ function MessageInput() {
                                     <span className="italic opacity-70">Tin nhắn đã bị thu hồi</span>
                                 ) : replyingTo.text ? (
                                     replyingTo.text
-                                ) : (
+                                ) : replyingTo.image ? (
                                     <span className="italic opacity-70">[Hình ảnh]</span>
+                                ) : (
+                                    <span className="italic opacity-70">[Tin nhắn thoại]</span>
                                 )}
                             </p>
                         </div>
@@ -100,10 +165,39 @@ function MessageInput() {
                 </div>
             )}
 
-            <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto flex space-x-4">
-                <input
-                    type="text"
-                    value={text}
+            {audioData && !isRecording && (
+                <div className="max-w-3xl mx-auto mb-3 flex items-center bg-slate-800/80 p-2 rounded-lg border border-slate-700 w-full">
+                    <audio src={audioData} controls className="h-10 flex-1 rounded" />
+                    <button
+                        onClick={removeAudio}
+                        className="ml-2 w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-200 hover:bg-red-500 hover:text-white transition-colors"
+                        type="button"
+                        title="Xóa ghi âm"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
+
+            <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto flex space-x-2 sm:space-x-4">
+                {isRecording ? (
+                    <div className="flex-1 bg-slate-800/50 border border-red-500/50 rounded-lg py-2 px-4 flex items-center justify-between animate-pulse">
+                        <div className="flex items-center gap-2 text-red-400">
+                            <Mic className="w-5 h-5" />
+                            <span className="font-medium">Đang ghi âm... {formatTime(recordingTime)}</span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={stopRecording}
+                            className="text-slate-300 hover:text-white bg-red-500/20 hover:bg-red-500 px-3 py-1 rounded-md text-sm transition-colors flex items-center gap-1"
+                        >
+                            <Square className="w-4 h-4 fill-current" /> Dừng
+                        </button>
+                    </div>
+                ) : (
+                    <input
+                        type="text"
+                        value={text}
                     onChange={(e) => {
                         setText(e.target.value);
                         isSoundEnabled && playRandomKeyStrokeSound();
@@ -121,6 +215,7 @@ function MessageInput() {
                     className="flex-1 bg-slate-800/50 border border-slate-700/50 rounded-lg py-2 px-4"
                     placeholder="Type your message..."
                 />
+                )}
 
                 <input
                     type="file"
@@ -133,18 +228,30 @@ function MessageInput() {
                 <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className={`bg-slate-800/50 text-slate-400 hover:text-slate-200 rounded-lg px-4 transition-colors ${imagePreview ? "text-cyan-500" : ""
+                    className={`bg-slate-800/50 text-slate-400 hover:text-slate-200 rounded-lg px-3 sm:px-4 transition-colors ${imagePreview ? "text-cyan-500" : ""
                         }`}
+                    disabled={isRecording || audioData}
                 >
                     <ImageIcon className="w-5 h-5" />
                 </button>
-                <button
-                    type="submit"
-                    disabled={!text.trim() && !imagePreview}
-                    className="bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-lg px-4 py-2 font-medium hover:from-cyan-600 hover:to-cyan-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    <SendIcon className="w-5 h-5" />
-                </button>
+
+                {!text.trim() && !imagePreview && !audioData && !isRecording ? (
+                    <button
+                        type="button"
+                        onClick={startRecording}
+                        className="bg-slate-800/50 text-slate-400 hover:text-cyan-400 rounded-lg px-3 sm:px-4 transition-colors"
+                    >
+                        <Mic className="w-5 h-5" />
+                    </button>
+                ) : (
+                    <button
+                        type="submit"
+                        disabled={(!text.trim() && !imagePreview && !audioData) || isRecording}
+                        className="bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-lg px-3 sm:px-4 py-2 font-medium hover:from-cyan-600 hover:to-cyan-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <SendIcon className="w-5 h-5" />
+                    </button>
+                )}
             </form>
         </div>
     );
