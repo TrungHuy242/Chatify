@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Check, CheckCheck, Trash2 } from "lucide-react";
+import { Check, CheckCheck, Trash2, Reply } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import ChatHeader from "./ChatHeader";
@@ -23,6 +23,7 @@ function ChatContainer() {
         isLoadingMore,
         hasMoreMessages,
         revokeMessage,
+        setReplyingTo,
     } = useChatStore();
     const { authUser } = useAuthStore();
     const messageEndRef = useRef(null);
@@ -90,16 +91,26 @@ function ChatContainer() {
                                 key={msg._id}
                                 className={`chat ${msg.senderId === authUser._id ? "chat-end" : "chat-start"} group`}
                             >
-                                {/* Trash Icon for my messages */}
-                                {msg.senderId === authUser._id && !msg.isRevoked && (
-                                    <div className="chat-header opacity-0 group-hover:opacity-100 transition-opacity flex items-center mb-1">
+                                {/* Hover actions */}
+                                {!msg.isRevoked && (
+                                    <div className={`chat-header opacity-0 group-hover:opacity-100 transition-opacity flex items-center mb-1 gap-1 ${msg.senderId === authUser._id ? "" : "flex-row-reverse"}`}>
                                         <button
-                                            onClick={() => revokeMessage(msg._id)}
-                                            className="text-slate-400 hover:text-red-400 p-1 rounded transition-colors tooltip tooltip-left tooltip-error"
-                                            data-tip="Thu hồi"
+                                            onClick={() => setReplyingTo(msg)}
+                                            className="text-slate-400 hover:text-cyan-400 p-1 rounded transition-colors tooltip tooltip-top"
+                                            data-tip="Trả lời"
                                         >
-                                            <Trash2 className="w-4 h-4" />
+                                            <Reply className="w-4 h-4" />
                                         </button>
+                                        
+                                        {msg.senderId === authUser._id && (
+                                            <button
+                                                onClick={() => revokeMessage(msg._id)}
+                                                className="text-slate-400 hover:text-red-400 p-1 rounded transition-colors tooltip tooltip-top tooltip-error"
+                                                data-tip="Thu hồi"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        )}
                                     </div>
                                 )}
                                 
@@ -116,6 +127,24 @@ function ChatContainer() {
                                         <p className="italic text-sm py-1 opacity-80">Tin nhắn đã bị thu hồi</p>
                                     ) : (
                                         <>
+                                            {/* Render replied message preview */}
+                                            {msg.replyTo && (
+                                                <div className={`mb-2 p-2 rounded-lg text-sm border-l-4 ${msg.senderId === authUser._id ? "bg-cyan-700/50 border-cyan-300" : "bg-slate-700/50 border-cyan-500"}`}>
+                                                    <p className="font-semibold text-xs mb-1 opacity-80">
+                                                        {msg.replyTo.senderId === authUser._id ? "Trả lời chính mình" : "Trả lời tin nhắn"}
+                                                    </p>
+                                                    <p className="truncate opacity-75">
+                                                        {msg.replyTo.isRevoked ? (
+                                                            <span className="italic">Tin nhắn đã bị thu hồi</span>
+                                                        ) : msg.replyTo.text ? (
+                                                            msg.replyTo.text
+                                                        ) : (
+                                                            <span className="italic">[Hình ảnh]</span>
+                                                        )}
+                                                    </p>
+                                                </div>
+                                            )}
+
                                             {msg.image && (
                                                 <img src={msg.image} alt="Shared" className="rounded-lg h-48 object-cover" />
                                             )}

@@ -37,7 +37,8 @@ export const getMessagesByUserId = async (req, res) => {
         
         let messages = await Message.find(query)
             .sort({ createdAt: -1 })
-            .limit(limit + 1);
+            .limit(limit + 1)
+            .populate("replyTo", "text image senderId isRevoked");
 
         const hasMore = messages.length > limit;
         if (hasMore) {
@@ -55,7 +56,7 @@ export const getMessagesByUserId = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
     try {
-        const { text, image } = req.body;
+        const { text, image, replyTo } = req.body;
         const { id: receiverId } = req.params;
         const senderId = req.user._id;
 
@@ -90,9 +91,11 @@ export const sendMessage = async (req, res) => {
             text,
             image: imageUrl,
             status: initialStatus,
+            replyTo: replyTo || null,
         });
 
         await newMessage.save();
+        await newMessage.populate("replyTo", "text image senderId isRevoked");
 
         if (receiverSocketId) {
             io.to(receiverSocketId).emit("newMessage", newMessage);

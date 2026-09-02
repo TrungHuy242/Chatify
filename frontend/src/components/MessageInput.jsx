@@ -13,8 +13,8 @@ function MessageInput() {
     const typingTimeoutRef = useRef(null);
     const fileInputRef = useRef(null);
 
-    const { sendMessage, isSoundEnabled, selectedUser } = useChatStore();
-    const { socket } = useAuthStore();
+    const { sendMessage, isSoundEnabled, selectedUser, replyingTo, clearReplyingTo } = useChatStore();
+    const { socket, authUser } = useAuthStore();
 
     const handleSendMessage = (e) => {
         e.preventDefault();
@@ -53,7 +53,34 @@ function MessageInput() {
     };
 
     return (
-        <div className="p-4 border-t border-slate-700/50">
+        <div className="p-4 border-t border-slate-700/50 flex flex-col gap-2">
+            {replyingTo && (
+                <div className="max-w-3xl mx-auto w-full mb-1">
+                    <div className="bg-slate-800/80 border-l-4 border-cyan-500 rounded-r-lg p-3 relative flex items-center justify-between shadow-sm">
+                        <div className="min-w-0 pr-6">
+                            <p className="text-xs font-semibold text-cyan-400 mb-1">
+                                Trả lời {replyingTo.senderId === authUser._id ? "chính mình" : "tin nhắn"}
+                            </p>
+                            <p className="text-sm text-slate-300 truncate">
+                                {replyingTo.isRevoked ? (
+                                    <span className="italic opacity-70">Tin nhắn đã bị thu hồi</span>
+                                ) : replyingTo.text ? (
+                                    replyingTo.text
+                                ) : (
+                                    <span className="italic opacity-70">[Hình ảnh]</span>
+                                )}
+                            </p>
+                        </div>
+                        <button
+                            onClick={clearReplyingTo}
+                            className="absolute top-2 right-2 text-slate-400 hover:text-slate-200 p-1 bg-slate-700/50 rounded-full hover:bg-slate-700 transition-colors"
+                        >
+                            <XIcon className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {imagePreview && (
                 <div className="max-w-3xl mx-auto mb-3 flex items-center">
                     <div className="relative">

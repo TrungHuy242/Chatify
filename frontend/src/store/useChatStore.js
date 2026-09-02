@@ -14,6 +14,7 @@ export const useChatStore = create((set, get) => ({
     isMessagesLoading: false,
     hasMoreMessages: false,
     isLoadingMore: false,
+    replyingTo: null,
     isSoundEnabled: JSON.parse(localStorage.getItem("isSoundEnabled")) === true,
 
     toggleSound: () => {
@@ -22,6 +23,8 @@ export const useChatStore = create((set, get) => ({
     },
 
     setActiveTab: (tab) => set({ activeTab: tab }),
+    setReplyingTo: (message) => set({ replyingTo: message }),
+    clearReplyingTo: () => set({ replyingTo: null }),
     setSelectedUser: (selectedUser) => {
         set({ selectedUser });
         if (selectedUser) {
@@ -119,7 +122,7 @@ export const useChatStore = create((set, get) => ({
     },
 
     sendMessage: async (messageData) => {
-        const { selectedUser, messages } = get();
+        const { selectedUser, messages, replyingTo } = get();
         const { authUser } = useAuthStore.getState();
 
         const tempId = `temp-${Date.now()}`;
@@ -132,9 +135,17 @@ export const useChatStore = create((set, get) => ({
             image: messageData.image,
             createdAt: new Date().toISOString(),
             isOptimistic: true, // flag to identify optimistic messages (optional)
+            replyTo: replyingTo || null,
         };
         // immediately update the ui by adding the message
         set({ messages: [...messages, optimisticMessage] });
+        
+        // Include replyTo in payload
+        if (replyingTo) {
+            messageData.replyTo = replyingTo._id;
+        }
+        
+        get().clearReplyingTo();
 
         // Update chats list (move to top and update lastMessageAt)
         const state = get();
