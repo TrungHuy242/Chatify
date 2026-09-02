@@ -13,8 +13,6 @@ function ChatContainer() {
         getMessagesByUserId,
         messages,
         isMessagesLoading,
-        subscribeToMessages,
-        unsubscribeFromMessages,
         subscribeToTyping,
         unsubscribeFromTyping,
         markMessagesAsRead,
@@ -36,15 +34,13 @@ function ChatContainer() {
     useEffect(() => {
         getMessagesByUserId(selectedUser._id);
         markMessagesAsRead(selectedUser._id);
-        subscribeToMessages();
         subscribeToTyping();
 
         // clean up
         return () => {
-            unsubscribeFromMessages();
             unsubscribeFromTyping();
         };
-    }, [selectedUser, getMessagesByUserId, markMessagesAsRead, subscribeToMessages, unsubscribeFromMessages, subscribeToTyping, unsubscribeFromTyping]);
+    }, [selectedUser, getMessagesByUserId, markMessagesAsRead, subscribeToTyping, unsubscribeFromTyping]);
 
     useEffect(() => {
         if (!isLoadingMore && isFetchingRef.current) {
