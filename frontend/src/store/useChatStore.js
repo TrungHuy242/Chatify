@@ -22,7 +22,18 @@ export const useChatStore = create((set, get) => ({
     },
 
     setActiveTab: (tab) => set({ activeTab: tab }),
-    setSelectedUser: (selectedUser) => set({ selectedUser }),
+    setSelectedUser: (selectedUser) => {
+        set({ selectedUser });
+        if (selectedUser) {
+            const state = get();
+            const chatIndex = state.chats.findIndex((c) => c._id === selectedUser._id);
+            if (chatIndex !== -1) {
+                let updatedChats = [...state.chats];
+                updatedChats[chatIndex] = { ...updatedChats[chatIndex], unreadCount: 0 };
+                set({ chats: updatedChats });
+            }
+        }
+    },
 
     getAllContacts: async () => {
         set({ isUsersLoading: true });
@@ -122,8 +133,20 @@ export const useChatStore = create((set, get) => ({
             createdAt: new Date().toISOString(),
             isOptimistic: true, // flag to identify optimistic messages (optional)
         };
-        // immidetaly update the ui by adding the message
+        // immediately update the ui by adding the message
         set({ messages: [...messages, optimisticMessage] });
+
+        // Update chats list (move to top and update lastMessageAt)
+        const state = get();
+        const chatIndex = state.chats.findIndex((c) => c._id === selectedUser._id);
+        if (chatIndex !== -1) {
+            let updatedChats = [...state.chats];
+            const chat = { ...updatedChats[chatIndex] };
+            chat.lastMessageAt = optimisticMessage.createdAt;
+            updatedChats.splice(chatIndex, 1);
+            updatedChats.unshift(chat);
+            set({ chats: updatedChats });
+        }
 
         try {
             const res = await axiosInstance.post(`/messages/send/${selectedUser._id}`, messageData);
@@ -136,29 +159,58 @@ export const useChatStore = create((set, get) => ({
     },
 
     subscribeToMessages: () => {
-        const { selectedUser, isSoundEnabled } = get();
-        if (!selectedUser) return;
-
         const socket = useAuthStore.getState().socket;
+        if (!socket) return;
+        
+        // Remove existing listener to prevent duplicates
+        socket.off("newMessage");
 
         socket.on("newMessage", (newMessage) => {
-            const isMessageSentFromSelectedUser = newMessage.senderId === selectedUser._id;
-            if (!isMessageSentFromSelectedUser) return;
+            const state = get();
+            const selectedUser = state.selectedUser;
+            const senderId = newMessage.senderId;
 
-            set({
-                messages: [...get().messages, newMessage],
-            });
+            // Update the chats list (sidebar)
+            const chatIndex = state.chats.findIndex((c) => c._id === senderId);
+            let updatedChats = [...state.chats];
             
-            // Mark the new message as read since the chat is open
-            get().markMessagesAsRead(selectedUser._id);
+            if (chatIndex !== -1) {
+                const chat = { ...updatedChats[chatIndex] };
+                chat.lastMessageAt = newMessage.createdAt;
+                
+                // Only increment unread if we're not currently looking at this chat
+                if (!selectedUser || selectedUser._id !== senderId) {
+                    chat.unreadCount = (chat.unreadCount || 0) + 1;
+                }
+                
+                // Move to top
+                updatedChats.splice(chatIndex, 1);
+                updatedChats.unshift(chat);
+                set({ chats: updatedChats });
+            } else {
+                // If not in chat list, fetch the updated list
+                state.getMyChatPartners();
+            }
 
+            const isMessageSentFromSelectedUser = selectedUser && senderId === selectedUser._id;
+            if (isMessageSentFromSelectedUser) {
+                set({
+                    messages: [...get().messages, newMessage],
+                });
+                
+                // Mark the new message as read since the chat is open
+                get().markMessagesAsRead(selectedUser._id);
+            }
+
+            const { isSoundEnabled } = get();
             if (isSoundEnabled) {
                 const notificationSound = new Audio("/sounds/notification.mp3");
-
                 notificationSound.currentTime = 0; // reset to start
                 notificationSound.play().catch((e) => console.log("Audio play failed:", e));
             }
         });
+
+        socket.off("messagesRead");
 
         socket.on("messagesRead", ({ readerId }) => {
             const { selectedUser } = get();

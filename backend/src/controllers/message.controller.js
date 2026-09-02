@@ -109,22 +109,67 @@ export const getChatPartners = async (req, res) => {
     try {
         const loggedInUserId = req.user._id;
 
-        // find all the messages where the logged-in user is either sender or receiver
-        const messages = await Message.find({
-            $or: [{ senderId: loggedInUserId }, { receiverId: loggedInUserId }],
-        });
+        const chatPartnersData = await Message.aggregate([
+            {
+                $match: {
+                    $or: [{ senderId: loggedInUserId }, { receiverId: loggedInUserId }],
+                },
+            },
+            {
+                $sort: { createdAt: -1 },
+            },
+            {
+                $group: {
+                    _id: {
+                        $cond: [
+                            { $eq: ["$senderId", loggedInUserId] },
+                            "$receiverId",
+                            "$senderId",
+                        ],
+                    },
+                    lastMessageAt: { $first: "$createdAt" },
+                    unreadCount: {
+                        $sum: {
+                            $cond: [
+                                {
+                                    $and: [
+                                        { $eq: ["$receiverId", loggedInUserId] },
+                                        { $ne: ["$status", "read"] },
+                                    ],
+                                },
+                                1,
+                                0,
+                            ],
+                        },
+                    },
+                },
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "_id",
+                    foreignField: "_id",
+                    as: "userDetails",
+                },
+            },
+            {
+                $unwind: "$userDetails",
+            },
+            {
+                $project: {
+                    "userDetails.password": 0,
+                },
+            },
+            {
+                $sort: { lastMessageAt: -1 },
+            },
+        ]);
 
-        const chatPartnerIds = [
-            ...new Set(
-                messages.map((msg) =>
-                    msg.senderId.toString() === loggedInUserId.toString()
-                        ? msg.receiverId.toString()
-                        : msg.senderId.toString()
-                )
-            ),
-        ];
-
-        const chatPartners = await User.find({ _id: { $in: chatPartnerIds } }).select("-password");
+        const chatPartners = chatPartnersData.map((data) => ({
+            ...data.userDetails,
+            lastMessageAt: data.lastMessageAt,
+            unreadCount: data.unreadCount,
+        }));
 
         res.status(200).json(chatPartners);
     } catch (error) {
