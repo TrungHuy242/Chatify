@@ -7,6 +7,7 @@ export const useChatStore = create((set, get) => ({
     allContacts: [],
     chats: [],
     messages: [],
+    typingUsers: [],
     activeTab: "chats",
     selectedUser: null,
     isUsersLoading: false,
@@ -56,6 +57,21 @@ export const useChatStore = create((set, get) => ({
         }
     },
 
+    markMessagesAsRead: async (userId) => {
+        try {
+            await axiosInstance.put(`/messages/${userId}/read`);
+            set((state) => ({
+                messages: state.messages.map((msg) =>
+                    msg.senderId === userId && msg.status !== "read"
+                        ? { ...msg, status: "read" }
+                        : msg
+                ),
+            }));
+        } catch (error) {
+            console.log("Error marking messages as read:", error);
+        }
+    },
+
     sendMessage: async (messageData) => {
         const { selectedUser, messages } = get();
         const { authUser } = useAuthStore.getState();
@@ -94,8 +110,12 @@ export const useChatStore = create((set, get) => ({
             const isMessageSentFromSelectedUser = newMessage.senderId === selectedUser._id;
             if (!isMessageSentFromSelectedUser) return;
 
-            const currentMessages = get().messages;
-            set({ messages: [...currentMessages, newMessage] });
+            set({
+                messages: [...get().messages, newMessage],
+            });
+            
+            // Mark the new message as read since the chat is open
+            get().markMessagesAsRead(selectedUser._id);
 
             if (isSoundEnabled) {
                 const notificationSound = new Audio("/sounds/notification.mp3");
@@ -104,10 +124,45 @@ export const useChatStore = create((set, get) => ({
                 notificationSound.play().catch((e) => console.log("Audio play failed:", e));
             }
         });
+
+        socket.on("messagesRead", ({ readerId }) => {
+            const { selectedUser } = get();
+            if (selectedUser && readerId === selectedUser._id) {
+                set((state) => ({
+                    messages: state.messages.map((msg) =>
+                        msg.receiverId === readerId && msg.status !== "read"
+                            ? { ...msg, status: "read" }
+                            : msg
+                    ),
+                }));
+            }
+        });
     },
 
     unsubscribeFromMessages: () => {
         const socket = useAuthStore.getState().socket;
         socket.off("newMessage");
+        socket.off("messagesRead");
+    },
+
+    subscribeToTyping: () => {
+        const socket = useAuthStore.getState().socket;
+        if (!socket) return;
+
+        socket.on("typing", (userId) => {
+            set((state) => ({ typingUsers: [...new Set([...state.typingUsers, userId])] }));
+        });
+
+        socket.on("stop_typing", (userId) => {
+            set((state) => ({ typingUsers: state.typingUsers.filter((id) => id !== userId) }));
+        });
+    },
+
+    unsubscribeFromTyping: () => {
+        const socket = useAuthStore.getState().socket;
+        if (socket) {
+            socket.off("typing");
+            socket.off("stop_typing");
+        }
     },
 }));

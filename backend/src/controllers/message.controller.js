@@ -58,16 +58,23 @@ export const sendMessage = async (req, res) => {
             imageUrl = uploadResponse.secure_url;
         }
 
+        const receiverSocketId = getReceiverSocketId(receiverId);
+        
+        let initialStatus = "sent";
+        if (receiverSocketId) {
+            initialStatus = "delivered";
+        }
+
         const newMessage = new Message({
             senderId,
             receiverId,
             text,
             image: imageUrl,
+            status: initialStatus,
         });
 
         await newMessage.save();
 
-        const receiverSocketId = getReceiverSocketId(receiverId);
         if (receiverSocketId) {
             io.to(receiverSocketId).emit("newMessage", newMessage);
         }
@@ -103,6 +110,30 @@ export const getChatPartners = async (req, res) => {
         res.status(200).json(chatPartners);
     } catch (error) {
         console.error("Error in getChatPartners: ", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export const markMessagesAsRead = async (req, res) => {
+    try {
+        const myId = req.user._id;
+        const { id: senderId } = req.params;
+
+        // Update all unread messages from this sender to me
+        await Message.updateMany(
+            { senderId, receiverId: myId, status: { $ne: "read" } },
+            { $set: { status: "read" } }
+        );
+
+        // Tell the sender that we read their messages
+        const senderSocketId = getReceiverSocketId(senderId);
+        if (senderSocketId) {
+            io.to(senderSocketId).emit("messagesRead", { readerId: myId });
+        }
+
+        res.status(200).json({ message: "Messages marked as read" });
+    } catch (error) {
+        console.log("Error in markMessagesAsRead controller: ", error.message);
         res.status(500).json({ error: "Internal server error" });
     }
 };

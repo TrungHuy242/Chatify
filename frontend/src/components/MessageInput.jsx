@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import useKeyboardSound from "../hooks/useKeyboardSound";
 import { useChatStore } from "../store/useChatStore";
 import toast from "react-hot-toast";
+import { useAuthStore } from "../store/useAuthStore";
 import { ImageIcon, SendIcon, XIcon } from "lucide-react";
 
 function MessageInput() {
@@ -9,9 +10,11 @@ function MessageInput() {
     const [text, setText] = useState("");
     const [imagePreview, setImagePreview] = useState(null);
 
+    const typingTimeoutRef = useRef(null);
     const fileInputRef = useRef(null);
 
-    const { sendMessage, isSoundEnabled } = useChatStore();
+    const { sendMessage, isSoundEnabled, selectedUser } = useChatStore();
+    const { socket } = useAuthStore();
 
     const handleSendMessage = (e) => {
         e.preventDefault();
@@ -25,6 +28,11 @@ function MessageInput() {
         setText("");
         setImagePreview("");
         if (fileInputRef.current) fileInputRef.current.value = "";
+
+        if (socket && selectedUser) {
+            socket.emit("stop_typing", selectedUser._id);
+        }
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
 
     const handleImageChange = (e) => {
@@ -72,6 +80,16 @@ function MessageInput() {
                     onChange={(e) => {
                         setText(e.target.value);
                         isSoundEnabled && playRandomKeyStrokeSound();
+
+                        if (socket && selectedUser) {
+                            socket.emit("typing", selectedUser._id);
+
+                            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
+                            typingTimeoutRef.current = setTimeout(() => {
+                                socket.emit("stop_typing", selectedUser._id);
+                            }, 2000);
+                        }
                     }}
                     className="flex-1 bg-slate-800/50 border border-slate-700/50 rounded-lg py-2 px-4"
                     placeholder="Type your message..."
