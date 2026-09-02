@@ -25,6 +25,10 @@ const messageSchema = new mongoose.Schema(
       enum: ["sent", "delivered", "read"],
       default: "sent",
     },
+    isRevoked: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

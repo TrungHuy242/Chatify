@@ -158,6 +158,22 @@ export const useChatStore = create((set, get) => ({
         }
     },
 
+    revokeMessage: async (messageId) => {
+        try {
+            await axiosInstance.delete(`/messages/${messageId}/revoke`);
+            // Update local state immediately
+            set((state) => ({
+                messages: state.messages.map((msg) =>
+                    msg._id === messageId
+                        ? { ...msg, isRevoked: true, text: "", image: "" }
+                        : msg
+                ),
+            }));
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to revoke message");
+        }
+    },
+
     subscribeToMessages: () => {
         const socket = useAuthStore.getState().socket;
         if (!socket) return;
@@ -224,12 +240,24 @@ export const useChatStore = create((set, get) => ({
                 }));
             }
         });
+
+        socket.off("messageRevoked");
+        socket.on("messageRevoked", (messageId) => {
+            set((state) => ({
+                messages: state.messages.map((msg) =>
+                    msg._id === messageId
+                        ? { ...msg, isRevoked: true, text: "", image: "" }
+                        : msg
+                ),
+            }));
+        });
     },
 
     unsubscribeFromMessages: () => {
         const socket = useAuthStore.getState().socket;
         socket.off("newMessage");
         socket.off("messagesRead");
+        socket.off("messageRevoked");
     },
 
     subscribeToTyping: () => {

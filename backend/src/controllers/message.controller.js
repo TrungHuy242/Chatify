@@ -201,3 +201,34 @@ export const markMessagesAsRead = async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 };
+
+export const revokeMessage = async (req, res) => {
+    try {
+        const { id: messageId } = req.params;
+        const myId = req.user._id;
+
+        const message = await Message.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ error: "Message not found" });
+        }
+
+        if (message.senderId.toString() !== myId.toString()) {
+            return res.status(403).json({ error: "You can only revoke your own messages" });
+        }
+
+        message.isRevoked = true;
+        message.text = "";
+        message.image = "";
+        await message.save();
+
+        const receiverSocketId = getReceiverSocketId(message.receiverId);
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("messageRevoked", messageId);
+        }
+
+        res.status(200).json(message);
+    } catch (error) {
+        console.log("Error in revokeMessage controller: ", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
