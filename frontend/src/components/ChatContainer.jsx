@@ -19,9 +19,15 @@ function ChatContainer() {
         unsubscribeFromTyping,
         markMessagesAsRead,
         typingUsers,
+        loadMoreMessages,
+        isLoadingMore,
+        hasMoreMessages,
     } = useChatStore();
     const { authUser } = useAuthStore();
     const messageEndRef = useRef(null);
+    const scrollContainerRef = useRef(null);
+    const prevScrollHeightRef = useRef(0);
+    const isFetchingRef = useRef(false);
 
     const isTyping = typingUsers.includes(selectedUser?._id);
 
@@ -39,15 +45,43 @@ function ChatContainer() {
     }, [selectedUser, getMessagesByUserId, markMessagesAsRead, subscribeToMessages, unsubscribeFromMessages, subscribeToTyping, unsubscribeFromTyping]);
 
     useEffect(() => {
-        if (messageEndRef.current) {
+        if (!isLoadingMore && isFetchingRef.current) {
+            // Finished loading more messages, adjust scroll position
+            if (scrollContainerRef.current) {
+                const newScrollHeight = scrollContainerRef.current.scrollHeight;
+                const scrollDiff = newScrollHeight - prevScrollHeightRef.current;
+                scrollContainerRef.current.scrollTop += scrollDiff;
+            }
+            isFetchingRef.current = false;
+        } else if (!isFetchingRef.current && messageEndRef.current) {
+            // New message arrived or initial load, scroll to bottom
             messageEndRef.current.scrollIntoView({ behavior: "smooth" });
         }
-    }, [messages]);
+    }, [messages, isLoadingMore]);
+
+    const handleScroll = () => {
+        if (!scrollContainerRef.current) return;
+        
+        if (scrollContainerRef.current.scrollTop === 0 && hasMoreMessages && !isLoadingMore) {
+            prevScrollHeightRef.current = scrollContainerRef.current.scrollHeight;
+            isFetchingRef.current = true;
+            loadMoreMessages(selectedUser._id);
+        }
+    };
 
     return (
         <>
             <ChatHeader />
-            <div className="flex-1 px-6 overflow-y-auto py-8">
+            <div 
+                className="flex-1 px-6 overflow-y-auto py-8" 
+                ref={scrollContainerRef} 
+                onScroll={handleScroll}
+            >
+                {isLoadingMore && (
+                    <div className="flex justify-center py-2">
+                        <span className="loading loading-spinner loading-md text-primary opacity-60"></span>
+                    </div>
+                )}
                 {messages.length > 0 && !isMessagesLoading ? (
                     <div className="max-w-3xl mx-auto space-y-6">
                         {messages.map((msg) => (

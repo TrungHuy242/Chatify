@@ -12,6 +12,8 @@ export const useChatStore = create((set, get) => ({
     selectedUser: null,
     isUsersLoading: false,
     isMessagesLoading: false,
+    hasMoreMessages: false,
+    isLoadingMore: false,
     isSoundEnabled: JSON.parse(localStorage.getItem("isSoundEnabled")) === true,
 
     toggleSound: () => {
@@ -49,11 +51,44 @@ export const useChatStore = create((set, get) => ({
         set({ isMessagesLoading: true });
         try {
             const res = await axiosInstance.get(`/messages/${userId}`);
-            set({ messages: res.data });
+            // res.data is now { messages: [...], hasMore: boolean }
+            // But just in case the backend hasn't been updated yet or returns array
+            if (Array.isArray(res.data)) {
+                set({ messages: res.data, hasMoreMessages: false });
+            } else {
+                set({ messages: res.data.messages, hasMoreMessages: res.data.hasMore });
+            }
         } catch (error) {
             toast.error(error.response?.data?.message || "Something went wrong");
         } finally {
             set({ isMessagesLoading: false });
+        }
+    },
+
+    loadMoreMessages: async (userId) => {
+        const { messages, isLoadingMore, hasMoreMessages } = get();
+        if (isLoadingMore || !hasMoreMessages || messages.length === 0) return;
+
+        set({ isLoadingMore: true });
+        try {
+            const oldestMessage = messages[0];
+            const cursor = oldestMessage.createdAt;
+            
+            const res = await axiosInstance.get(`/messages/${userId}?cursor=${cursor}`);
+            
+            if (Array.isArray(res.data)) {
+                set({ messages: [...res.data, ...messages], hasMoreMessages: false });
+            } else {
+                set({ 
+                    messages: [...res.data.messages, ...messages], 
+                    hasMoreMessages: res.data.hasMore 
+                });
+            }
+        } catch (error) {
+            console.log("Error loading more messages:", error);
+            toast.error(error.response?.data?.message || "Failed to load older messages");
+        } finally {
+            set({ isLoadingMore: false });
         }
     },
 

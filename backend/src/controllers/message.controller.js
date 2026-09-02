@@ -20,14 +20,33 @@ export const getMessagesByUserId = async (req, res) => {
         const myId = req.user._id;
         const { id: userToChatId } = req.params;
 
-        const messages = await Message.find({
+        const { cursor } = req.query;
+        
+        const query = {
             $or: [
                 { senderId: myId, receiverId: userToChatId },
                 { senderId: userToChatId, receiverId: myId },
             ],
-        });
+        };
 
-        res.status(200).json(messages);
+        if (cursor) {
+            query.createdAt = { $lt: new Date(cursor) };
+        }
+
+        const limit = 50;
+        
+        let messages = await Message.find(query)
+            .sort({ createdAt: -1 })
+            .limit(limit + 1);
+
+        const hasMore = messages.length > limit;
+        if (hasMore) {
+            messages.pop(); // Remove the extra message used for hasMore check
+        }
+
+        messages = messages.reverse(); // Reverse to return chronologically
+
+        res.status(200).json({ messages, hasMore });
     } catch (error) {
         console.log("Error in getMessages controller: ", error.message);
         res.status(500).json({ error: "Internal server error" });
