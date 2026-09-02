@@ -185,6 +185,22 @@ export const useChatStore = create((set, get) => ({
         }
     },
 
+    reactToMessage: async (messageId, emoji) => {
+        try {
+            const res = await axiosInstance.post(`/messages/${messageId}/react`, { emoji });
+            // Update local state immediately
+            set((state) => ({
+                messages: state.messages.map((msg) =>
+                    msg._id === messageId
+                        ? { ...msg, reactions: res.data.reactions }
+                        : msg
+                ),
+            }));
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to react to message");
+        }
+    },
+
     subscribeToMessages: () => {
         const socket = useAuthStore.getState().socket;
         if (!socket) return;
@@ -262,6 +278,17 @@ export const useChatStore = create((set, get) => ({
                 ),
             }));
         });
+
+        socket.off("messageReactionUpdated");
+        socket.on("messageReactionUpdated", ({ messageId, reactions }) => {
+            set((state) => ({
+                messages: state.messages.map((msg) =>
+                    msg._id === messageId
+                        ? { ...msg, reactions }
+                        : msg
+                ),
+            }));
+        });
     },
 
     unsubscribeFromMessages: () => {
@@ -269,6 +296,7 @@ export const useChatStore = create((set, get) => ({
         socket.off("newMessage");
         socket.off("messagesRead");
         socket.off("messageRevoked");
+        socket.off("messageReactionUpdated");
     },
 
     subscribeToTyping: () => {

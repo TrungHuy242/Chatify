@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { Check, CheckCheck, Trash2, Reply } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, CheckCheck, Trash2, Reply, SmilePlus } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import ChatHeader from "./ChatHeader";
@@ -22,12 +22,16 @@ function ChatContainer() {
         hasMoreMessages,
         revokeMessage,
         setReplyingTo,
+        reactToMessage,
     } = useChatStore();
     const { authUser } = useAuthStore();
     const messageEndRef = useRef(null);
     const scrollContainerRef = useRef(null);
     const prevScrollHeightRef = useRef(0);
     const isFetchingRef = useRef(false);
+    
+    const [activeReactionMessageId, setActiveReactionMessageId] = useState(null);
+    const emojis = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
     const isTyping = typingUsers.includes(selectedUser?._id);
 
@@ -89,7 +93,33 @@ function ChatContainer() {
                             >
                                 {/* Hover actions */}
                                 {!msg.isRevoked && (
-                                    <div className={`chat-header opacity-0 group-hover:opacity-100 transition-opacity flex items-center mb-1 gap-1 ${msg.senderId === authUser._id ? "" : "flex-row-reverse"}`}>
+                                    <div className={`chat-header opacity-0 group-hover:opacity-100 transition-opacity flex items-center mb-1 gap-1 relative ${msg.senderId === authUser._id ? "" : "flex-row-reverse"}`}>
+                                        <button
+                                            onClick={() => setActiveReactionMessageId(activeReactionMessageId === msg._id ? null : msg._id)}
+                                            className="text-slate-400 hover:text-yellow-400 p-1 rounded transition-colors tooltip tooltip-top"
+                                            data-tip="Cảm xúc"
+                                        >
+                                            <SmilePlus className="w-4 h-4" />
+                                        </button>
+
+                                        {/* Reaction Picker Popup */}
+                                        {activeReactionMessageId === msg._id && (
+                                            <div className={`absolute bottom-full mb-2 bg-slate-800 border border-slate-700 shadow-lg rounded-full flex gap-1 p-1 z-10 ${msg.senderId === authUser._id ? "right-0" : "left-0"}`}>
+                                                {emojis.map((emoji) => (
+                                                    <button
+                                                        key={emoji}
+                                                        onClick={() => {
+                                                            reactToMessage(msg._id, emoji);
+                                                            setActiveReactionMessageId(null);
+                                                        }}
+                                                        className="hover:bg-slate-700 p-1.5 rounded-full transition-transform hover:scale-125"
+                                                    >
+                                                        <span className="text-xl leading-none block">{emoji}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+
                                         <button
                                             onClick={() => setReplyingTo(msg)}
                                             className="text-slate-400 hover:text-cyan-400 p-1 rounded transition-colors tooltip tooltip-top"
@@ -146,6 +176,18 @@ function ChatContainer() {
                                             )}
                                             {msg.text && <p className="mt-2">{msg.text}</p>}
                                         </>
+                                    )}
+                                    
+                                    {/* Render Reactions */}
+                                    {msg.reactions && msg.reactions.length > 0 && !msg.isRevoked && (
+                                        <div className={`absolute -bottom-3 ${msg.senderId === authUser._id ? "right-2" : "left-2"} bg-slate-800 border border-slate-700 rounded-full px-2 py-0.5 flex items-center gap-1 shadow-sm z-10`}>
+                                            {[...new Set(msg.reactions.map(r => r.emoji))].map((emoji, idx) => (
+                                                <span key={idx} className="text-xs">{emoji}</span>
+                                            ))}
+                                            {msg.reactions.length > 1 && (
+                                                <span className="text-[10px] text-slate-300 ml-0.5">{msg.reactions.length}</span>
+                                            )}
+                                        </div>
                                     )}
                                     
                                     {!msg.isRevoked && (

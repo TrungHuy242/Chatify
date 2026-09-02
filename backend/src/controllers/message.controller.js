@@ -235,3 +235,55 @@ export const revokeMessage = async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 };
+
+export const reactToMessage = async (req, res) => {
+    try {
+        const { id: messageId } = req.params;
+        const { emoji } = req.body;
+        const myId = req.user._id;
+
+        const message = await Message.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ error: "Message not found" });
+        }
+
+        if (message.isRevoked) {
+            return res.status(400).json({ error: "Cannot react to revoked message" });
+        }
+
+        const existingReactionIndex = message.reactions.findIndex(
+            (r) => r.userId.toString() === myId.toString()
+        );
+
+        if (existingReactionIndex !== -1) {
+            if (message.reactions[existingReactionIndex].emoji === emoji) {
+                // Remove reaction if same emoji
+                message.reactions.splice(existingReactionIndex, 1);
+            } else {
+                // Update emoji
+                message.reactions[existingReactionIndex].emoji = emoji;
+            }
+        } else {
+            // Add new reaction
+            message.reactions.push({ userId: myId, emoji });
+        }
+
+        await message.save();
+
+        // Emit to the other person
+        const otherPersonId = message.senderId.toString() === myId.toString() ? message.receiverId : message.senderId;
+        const otherSocketId = getReceiverSocketId(otherPersonId);
+        
+        if (otherSocketId) {
+            io.to(otherSocketId).emit("messageReactionUpdated", {
+                messageId,
+                reactions: message.reactions
+            });
+        }
+
+        res.status(200).json(message);
+    } catch (error) {
+        console.log("Error in reactToMessage controller: ", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};

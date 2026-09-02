@@ -1,5 +1,5 @@
 import express from "express";
-import { getAllContacts, getMessagesByUserId, sendMessage, getChatPartners, markMessagesAsRead, revokeMessage } from "../controllers/message.controller.js";
+import { getAllContacts, getMessagesByUserId, sendMessage, getChatPartners, markMessagesAsRead, revokeMessage, reactToMessage } from "../controllers/message.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { arcjetProtection } from "../middleware/arcjet.middleware.js";
 const router = express.Router();
@@ -12,5 +12,6 @@ router.get("/:id", getMessagesByUserId);
 router.post("/send/:id", sendMessage);
 router.put("/:id/read", markMessagesAsRead);
 router.delete("/:id/revoke", revokeMessage);
+router.post("/:id/react", reactToMessage);
 
 export default router;
