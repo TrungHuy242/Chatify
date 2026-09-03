@@ -23,6 +23,8 @@ function ChatContainer() {
         revokeMessage,
         setReplyingTo,
         reactToMessage,
+        isSearching,
+        searchQuery,
     } = useChatStore();
     const { authUser } = useAuthStore();
     const messageEndRef = useRef(null);
@@ -34,6 +36,20 @@ function ChatContainer() {
     const emojis = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
     const isTyping = typingUsers.includes(selectedUser?._id);
+
+    const filteredMessages = (isSearching && searchQuery.trim() !== "")
+        ? messages.filter((msg) => msg.text?.toLowerCase().includes(searchQuery.toLowerCase()))
+        : messages;
+
+    const highlightText = (text, query) => {
+        if (!query || !isSearching || !text) return text;
+        const parts = text.split(new RegExp(`(${query})`, 'gi'));
+        return parts.map((part, index) => 
+            part.toLowerCase() === query.toLowerCase() 
+                ? <mark key={index} className="bg-yellow-400 text-slate-900 rounded-sm px-0.5">{part}</mark> 
+                : part
+        );
+    };
 
     useEffect(() => {
         getMessagesByUserId(selectedUser._id);
@@ -59,7 +75,7 @@ function ChatContainer() {
             // New message arrived or initial load, scroll to bottom
             messageEndRef.current.scrollIntoView({ behavior: "smooth" });
         }
-    }, [messages, isLoadingMore]);
+    }, [filteredMessages, isLoadingMore]);
 
     const handleScroll = () => {
         if (!scrollContainerRef.current) return;
@@ -84,9 +100,9 @@ function ChatContainer() {
                         <span className="loading loading-spinner loading-md text-primary opacity-60"></span>
                     </div>
                 )}
-                {messages.length > 0 && !isMessagesLoading ? (
+                {filteredMessages.length > 0 && !isMessagesLoading ? (
                     <div className="max-w-3xl mx-auto space-y-6">
-                        {messages.map((msg) => (
+                        {filteredMessages.map((msg) => (
                             <div
                                 key={msg._id}
                                 className={`chat ${msg.senderId === authUser._id ? "chat-end" : "chat-start"} group`}
@@ -179,7 +195,7 @@ function ChatContainer() {
                                             {msg.audio && (
                                                 <audio src={msg.audio} controls className="h-10 w-[200px]" />
                                             )}
-                                            {msg.text && <p className="mt-2">{msg.text}</p>}
+                                            {msg.text && <p className="mt-2">{highlightText(msg.text, searchQuery)}</p>}
                                         </>
                                     )}
                                     

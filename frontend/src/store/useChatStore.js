@@ -16,6 +16,8 @@ export const useChatStore = create((set, get) => ({
     isLoadingMore: false,
     replyingTo: null,
     isSoundEnabled: JSON.parse(localStorage.getItem("isSoundEnabled")) === true,
+    isSearching: false,
+    searchQuery: "",
 
     toggleSound: () => {
         localStorage.setItem("isSoundEnabled", !get().isSoundEnabled);
@@ -25,6 +27,8 @@ export const useChatStore = create((set, get) => ({
     setActiveTab: (tab) => set({ activeTab: tab }),
     setReplyingTo: (message) => set({ replyingTo: message }),
     clearReplyingTo: () => set({ replyingTo: null }),
+    setIsSearching: (isSearching) => set({ isSearching }),
+    setSearchQuery: (searchQuery) => set({ searchQuery }),
     setSelectedUser: (selectedUser) => {
         set({ selectedUser });
         if (selectedUser) {
