@@ -5,7 +5,7 @@ import NoChatsFound from "./NoChatsFound";
 import { useAuthStore } from "../store/useAuthStore";
 
 function ChatsList() {
-    const { getMyChatPartners, chats, isUsersLoading, setSelectedUser } = useChatStore();
+    const { getMyChatPartners, chats, isUsersLoading, setSelectedUser, sidebarSearchTerm } = useChatStore();
     const { onlineUsers } = useAuthStore();
 
     useEffect(() => {
@@ -15,9 +15,35 @@ function ChatsList() {
     if (isUsersLoading) return <UsersLoadingSkeleton />;
     if (chats.length === 0) return <NoChatsFound />;
 
+    const removeVietnameseTones = (str) => {
+        if (!str) return "";
+        return str
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/đ/g, "d")
+            .replace(/Đ/g, "D")
+            .toLowerCase();
+    };
+
+    const filteredChats = chats.filter((chat) => {
+        if (!sidebarSearchTerm || !sidebarSearchTerm.trim()) return true;
+        const query = removeVietnameseTones(sidebarSearchTerm.trim());
+        const name = removeVietnameseTones(chat.fullName);
+        return name.includes(query) || chat.fullName.toLowerCase().includes(sidebarSearchTerm.toLowerCase().trim());
+    });
+
+    if (sidebarSearchTerm && sidebarSearchTerm.trim() && filteredChats.length === 0) {
+        return (
+            <div className="text-center py-8 px-4 text-slate-400 text-xs space-y-1">
+                <p>Không tìm thấy cuộc trò chuyện nào phù hợp</p>
+                <p className="text-slate-500 text-[11px]">Thử tìm với từ khóa khác xem sao</p>
+            </div>
+        );
+    }
+
     return (
         <>
-            {chats.map((chat) => (
+            {filteredChats.map((chat) => (
                 <div
                     key={chat._id}
                     className="bg-cyan-500/10 p-4 rounded-lg cursor-pointer hover:bg-cyan-500/20 transition-colors"

@@ -4,7 +4,7 @@ import UsersLoadingSkeleton from "./UsersLoadingSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
 
 function ContactList() {
-    const { getAllContacts, allContacts, setSelectedUser, isUsersLoading } = useChatStore();
+    const { getAllContacts, allContacts, setSelectedUser, isUsersLoading, sidebarSearchTerm } = useChatStore();
     const { onlineUsers } = useAuthStore();
 
     useEffect(() => {
@@ -13,9 +13,35 @@ function ContactList() {
 
     if (isUsersLoading) return <UsersLoadingSkeleton />;
 
+    const removeVietnameseTones = (str) => {
+        if (!str) return "";
+        return str
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/đ/g, "d")
+            .replace(/Đ/g, "D")
+            .toLowerCase();
+    };
+
+    const filteredContacts = allContacts.filter((contact) => {
+        if (!sidebarSearchTerm || !sidebarSearchTerm.trim()) return true;
+        const query = removeVietnameseTones(sidebarSearchTerm.trim());
+        const name = removeVietnameseTones(contact.fullName);
+        return name.includes(query) || contact.fullName.toLowerCase().includes(sidebarSearchTerm.toLowerCase().trim());
+    });
+
+    if (sidebarSearchTerm && sidebarSearchTerm.trim() && filteredContacts.length === 0) {
+        return (
+            <div className="text-center py-8 px-4 text-slate-400 text-xs space-y-1">
+                <p>Không tìm thấy bạn bè nào phù hợp</p>
+                <p className="text-slate-500 text-[11px]">Thử tìm với từ khóa khác xem sao</p>
+            </div>
+        );
+    }
+
     return (
         <>
-            {allContacts.map((contact) => (
+            {filteredContacts.map((contact) => (
                 <div
                     key={contact._id}
                     className="bg-cyan-500/10 p-4 rounded-lg cursor-pointer hover:bg-cyan-500/20 transition-colors"

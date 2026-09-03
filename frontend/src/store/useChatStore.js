@@ -19,6 +19,7 @@ export const useChatStore = create((set, get) => ({
     isSearching: false,
     searchQuery: "",
     isChatInfoOpen: false,
+    sidebarSearchTerm: "",
 
     toggleSound: () => {
         localStorage.setItem("isSoundEnabled", !get().isSoundEnabled);
@@ -30,6 +31,7 @@ export const useChatStore = create((set, get) => ({
     clearReplyingTo: () => set({ replyingTo: null }),
     setIsSearching: (isSearching) => set({ isSearching }),
     setSearchQuery: (searchQuery) => set({ searchQuery }),
+    setSidebarSearchTerm: (sidebarSearchTerm) => set({ sidebarSearchTerm }),
     setIsChatInfoOpen: (isChatInfoOpen) => set({ isChatInfoOpen }),
     toggleChatInfo: () => set((state) => ({ isChatInfoOpen: !state.isChatInfoOpen })),
     setSelectedUser: (selectedUser) => {
