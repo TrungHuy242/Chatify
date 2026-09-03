@@ -5,6 +5,7 @@ import SignUpPage from "./pages/SignUpPage";
 import { useAuthStore } from "./store/useAuthStore";
 import { useEffect } from "react";
 import PageLoader from "./components/PageLoader";
+import { initTabNotifier } from "./lib/tabNotifier";
 
 import { Toaster } from "react-hot-toast";
 
@@ -13,6 +14,7 @@ function App() {
 
   useEffect(() => {
     checkAuth();
+    initTabNotifier();
   }, [checkAuth]);
 
   if (isCheckingAuth) return <PageLoader />;

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { axiosInstance } from "../lib/axios";
 import toast from "react-hot-toast";
 import { useAuthStore } from "./useAuthStore";
+import { notifyNewMessage } from "../lib/tabNotifier";
 
 export const useChatStore = create((set, get) => ({
     allContacts: [],
@@ -293,12 +294,14 @@ export const useChatStore = create((set, get) => ({
                 get().markMessagesAsRead(selectedUser._id);
             }
 
-            const { isSoundEnabled } = get();
-            if (isSoundEnabled) {
-                const notificationSound = new Audio("/sounds/notification.mp3");
-                notificationSound.currentTime = 0; // reset to start
-                notificationSound.play().catch((e) => console.log("Audio play failed:", e));
-            }
+            // Find sender's name for notification
+            const sender = state.chats.find((c) => c._id === senderId) || state.allContacts?.find((c) => c._id === senderId);
+            const senderName = sender ? sender.fullName : "Tin nhắn mới";
+
+            notifyNewMessage({
+                senderName,
+                playSound: get().isSoundEnabled,
+            });
         });
 
         socket.off("messagesRead");
