@@ -37,6 +37,10 @@ const messageSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isPinned: {
+      type: Boolean,
+      default: false,
+    },
     reactions: [
       {
         userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },

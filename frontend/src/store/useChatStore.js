@@ -187,12 +187,27 @@ export const useChatStore = create((set, get) => ({
             set((state) => ({
                 messages: state.messages.map((msg) =>
                     msg._id === messageId
-                        ? { ...msg, isRevoked: true, text: "", image: "" }
+                        ? { ...msg, isRevoked: true, text: "", image: "", audio: "", isPinned: false }
                         : msg
                 ),
             }));
         } catch (error) {
             toast.error(error.response?.data?.message || "Failed to revoke message");
+        }
+    },
+
+    togglePinMessage: async (messageId) => {
+        try {
+            const res = await axiosInstance.put(`/messages/${messageId}/pin`);
+            const isPinned = res.data.isPinned;
+            set((state) => ({
+                messages: state.messages.map((msg) =>
+                    msg._id === messageId ? { ...msg, isPinned } : msg
+                ),
+            }));
+            toast.success(isPinned ? "Đã ghim tin nhắn" : "Đã bỏ ghim tin nhắn");
+        } catch (error) {
+            toast.error(error.response?.data?.error || error.response?.data?.message || "Thao tác thất bại");
         }
     },
 
@@ -284,7 +299,7 @@ export const useChatStore = create((set, get) => ({
             set((state) => ({
                 messages: state.messages.map((msg) =>
                     msg._id === messageId
-                        ? { ...msg, isRevoked: true, text: "", image: "" }
+                        ? { ...msg, isRevoked: true, text: "", image: "", audio: "", isPinned: false }
                         : msg
                 ),
             }));
@@ -300,14 +315,25 @@ export const useChatStore = create((set, get) => ({
                 ),
             }));
         });
+
+        socket.off("messagePinned");
+        socket.on("messagePinned", ({ messageId, isPinned }) => {
+            set((state) => ({
+                messages: state.messages.map((msg) =>
+                    msg._id === messageId ? { ...msg, isPinned } : msg
+                ),
+            }));
+        });
     },
 
     unsubscribeFromMessages: () => {
         const socket = useAuthStore.getState().socket;
+        if (!socket) return;
         socket.off("newMessage");
         socket.off("messagesRead");
         socket.off("messageRevoked");
         socket.off("messageReactionUpdated");
+        socket.off("messagePinned");
     },
 
     subscribeToTyping: () => {

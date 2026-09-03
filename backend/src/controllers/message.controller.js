@@ -232,6 +232,8 @@ export const revokeMessage = async (req, res) => {
         message.isRevoked = true;
         message.text = "";
         message.image = "";
+        message.audio = "";
+        message.isPinned = false;
         await message.save();
 
         const receiverSocketId = getReceiverSocketId(message.receiverId);
@@ -294,6 +296,46 @@ export const reactToMessage = async (req, res) => {
         res.status(200).json(message);
     } catch (error) {
         console.log("Error in reactToMessage controller: ", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export const togglePinMessage = async (req, res) => {
+    try {
+        const { id: messageId } = req.params;
+        const myId = req.user._id;
+
+        const message = await Message.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ error: "Message not found" });
+        }
+
+        if (message.isRevoked) {
+            return res.status(400).json({ error: "Cannot pin a revoked message" });
+        }
+
+        // Check if user is sender or receiver
+        if (!message.senderId.equals(myId) && !message.receiverId.equals(myId)) {
+            return res.status(403).json({ error: "Unauthorized" });
+        }
+
+        message.isPinned = !message.isPinned;
+        await message.save();
+        await message.populate("replyTo", "text image audio senderId isRevoked");
+
+        // Emit socket event to the other participant
+        const otherPersonId = message.senderId.toString() === myId.toString() ? message.receiverId : message.senderId;
+        const otherSocketId = getReceiverSocketId(otherPersonId);
+        if (otherSocketId) {
+            io.to(otherSocketId).emit("messagePinned", {
+                messageId: message._id,
+                isPinned: message.isPinned,
+            });
+        }
+
+        res.status(200).json(message);
+    } catch (error) {
+        console.log("Error in togglePinMessage controller: ", error.message);
         res.status(500).json({ error: "Internal server error" });
     }
 };

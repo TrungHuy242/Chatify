@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, CheckCheck, Trash2, Reply, SmilePlus } from "lucide-react";
+import { Check, CheckCheck, Trash2, Reply, SmilePlus, Pin, PinOff } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import ChatHeader from "./ChatHeader";
@@ -23,6 +23,7 @@ function ChatContainer() {
         revokeMessage,
         setReplyingTo,
         reactToMessage,
+        togglePinMessage,
         isSearching,
         searchQuery,
     } = useChatStore();
@@ -33,6 +34,7 @@ function ChatContainer() {
     const isFetchingRef = useRef(false);
     
     const [activeReactionMessageId, setActiveReactionMessageId] = useState(null);
+    const [highlightedMessageId, setHighlightedMessageId] = useState(null);
     const emojis = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
     const isTyping = typingUsers.includes(selectedUser?._id);
@@ -87,9 +89,55 @@ function ChatContainer() {
         }
     };
 
+    const pinnedMessage = messages.slice().reverse().find((m) => m.isPinned && !m.isRevoked);
+
+    const scrollToMessage = (messageId) => {
+        const el = document.getElementById(`msg-${messageId}`);
+        if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+            setHighlightedMessageId(messageId);
+            setTimeout(() => {
+                setHighlightedMessageId(null);
+            }, 2000);
+        }
+    };
+
     return (
         <>
             <ChatHeader />
+            {pinnedMessage && (
+                <div className="bg-slate-800/90 backdrop-blur border-b border-cyan-500/30 px-6 py-2 flex items-center justify-between text-xs z-10 transition-all shadow-sm">
+                    <div 
+                        onClick={() => scrollToMessage(pinnedMessage._id)} 
+                        className="flex items-center gap-2 cursor-pointer flex-1 min-w-0 mr-4 hover:opacity-90 group"
+                    >
+                        <div className="p-1 rounded bg-cyan-500/10 text-cyan-400 group-hover:bg-cyan-500/20 transition-colors">
+                            <Pin className="w-3.5 h-3.5 fill-cyan-400" />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                            <span className="font-semibold text-cyan-400 text-[11px] leading-tight">
+                                Tin nhắn đã ghim • {pinnedMessage.senderId === authUser._id ? "Bạn" : selectedUser.fullName}
+                            </span>
+                            <span className="text-slate-300 truncate max-w-md">
+                                {pinnedMessage.text ? (
+                                    pinnedMessage.text
+                                ) : pinnedMessage.image ? (
+                                    <span className="italic">[Hình ảnh]</span>
+                                ) : (
+                                    <span className="italic">[Tin nhắn thoại]</span>
+                                )}
+                            </span>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => togglePinMessage(pinnedMessage._id)}
+                        className="text-slate-400 hover:text-red-400 p-1 rounded transition-colors tooltip tooltip-left"
+                        data-tip="Bỏ ghim"
+                    >
+                        <PinOff className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
             <div 
                 className="flex-1 px-6 overflow-y-auto py-8" 
                 ref={scrollContainerRef} 
@@ -105,7 +153,10 @@ function ChatContainer() {
                         {filteredMessages.map((msg) => (
                             <div
                                 key={msg._id}
-                                className={`chat ${msg.senderId === authUser._id ? "chat-end" : "chat-start"} group`}
+                                id={`msg-${msg._id}`}
+                                className={`chat ${msg.senderId === authUser._id ? "chat-end" : "chat-start"} group transition-all duration-300 ${
+                                    highlightedMessageId === msg._id ? "scale-[1.02]" : ""
+                                }`}
                             >
                                 {/* Hover actions */}
                                 {!msg.isRevoked && (
@@ -144,6 +195,18 @@ function ChatContainer() {
                                             <Reply className="w-4 h-4" />
                                         </button>
                                         
+                                        <button
+                                            onClick={() => togglePinMessage(msg._id)}
+                                            className={`p-1 rounded transition-colors tooltip tooltip-top ${
+                                                msg.isPinned
+                                                    ? "text-cyan-400 hover:text-cyan-300"
+                                                    : "text-slate-400 hover:text-cyan-400"
+                                            }`}
+                                            data-tip={msg.isPinned ? "Bỏ ghim" : "Ghim"}
+                                        >
+                                            <Pin className={`w-4 h-4 ${msg.isPinned ? "fill-cyan-400" : ""}`} />
+                                        </button>
+
                                         {msg.senderId === authUser._id && (
                                             <button
                                                 onClick={() => revokeMessage(msg._id)}
@@ -157,7 +220,9 @@ function ChatContainer() {
                                 )}
                                 
                                 <div
-                                    className={`chat-bubble relative ${
+                                    className={`chat-bubble relative transition-all duration-300 ${
+                                        highlightedMessageId === msg._id ? "ring-2 ring-cyan-400 shadow-lg shadow-cyan-500/30" : ""
+                                    } ${
                                         msg.isRevoked
                                             ? "bg-slate-700/50 text-slate-400 border border-slate-700/50"
                                             : msg.senderId === authUser._id
@@ -165,6 +230,12 @@ function ChatContainer() {
                                                 : "bg-slate-800 text-slate-200"
                                     }`}
                                 >
+                                    {msg.isPinned && !msg.isRevoked && (
+                                        <div className="flex items-center gap-1 text-[11px] text-cyan-300 font-medium mb-1 opacity-90 border-b border-cyan-400/20 pb-0.5">
+                                            <Pin className="w-3 h-3 fill-cyan-300" />
+                                            <span>Đã ghim</span>
+                                        </div>
+                                    )}
                                     {msg.isRevoked ? (
                                         <p className="italic text-sm py-1 opacity-80">Tin nhắn đã bị thu hồi</p>
                                     ) : (
