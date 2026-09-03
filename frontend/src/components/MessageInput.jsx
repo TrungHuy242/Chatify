@@ -3,7 +3,7 @@ import useKeyboardSound from "../hooks/useKeyboardSound";
 import { useChatStore } from "../store/useChatStore";
 import toast from "react-hot-toast";
 import { useAuthStore } from "../store/useAuthStore";
-import { ImageIcon, SendIcon, XIcon, Mic, Square, Trash2, Smile, Paperclip, FileText } from "lucide-react";
+import { ImageIcon, SendIcon, XIcon, Mic, Square, Trash2, Smile, Paperclip, FileText, Timer } from "lucide-react";
 import EmojiPicker from "./EmojiPicker";
 
 function MessageInput() {
@@ -17,6 +17,7 @@ function MessageInput() {
     const [fileName, setFileName] = useState("");
     const [fileSize, setFileSize] = useState(0);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [showTimerMenu, setShowTimerMenu] = useState(false);
 
     const typingTimeoutRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -26,7 +27,7 @@ function MessageInput() {
     const audioChunksRef = useRef([]);
     const timerRef = useRef(null);
 
-    const { sendMessage, isSoundEnabled, selectedUser, replyingTo, clearReplyingTo } = useChatStore();
+    const { sendMessage, isSoundEnabled, selectedUser, replyingTo, clearReplyingTo, disappearingOption, setDisappearingOption } = useChatStore();
     const { socket, authUser } = useAuthStore();
 
     const handleSendMessage = (e) => {
@@ -103,6 +104,14 @@ function MessageInput() {
         const sizes = ["B", "KB", "MB", "GB"];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+    };
+
+    const getTimerShortLabel = (seconds) => {
+        if (seconds === 10) return "10s";
+        if (seconds === 30) return "30s";
+        if (seconds === 60) return "1m";
+        if (seconds === 300) return "5m";
+        return `${seconds}s`;
     };
 
     const removeImage = () => {
@@ -347,6 +356,55 @@ function MessageInput() {
                             onSelectEmoji={handleEmojiSelect}
                             onClose={() => setShowEmojiPicker(false)}
                         />
+                    )}
+                </div>
+
+                <div className="relative">
+                    <button
+                        type="button"
+                        onClick={() => setShowTimerMenu((prev) => !prev)}
+                        className={`rounded-lg px-2.5 sm:px-3 py-2 transition-colors flex items-center justify-center gap-1 text-xs font-medium ${
+                            disappearingOption > 0
+                                ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                                : "bg-slate-800/50 text-slate-400 hover:text-slate-200"
+                        }`}
+                        disabled={isRecording}
+                        title={disappearingOption > 0 ? `Tự hủy sau ${getTimerShortLabel(disappearingOption)}` : "Cài đặt tin nhắn tự hủy"}
+                    >
+                        <Timer className="w-4 h-4" />
+                        {disappearingOption > 0 && <span>{getTimerShortLabel(disappearingOption)}</span>}
+                    </button>
+
+                    {showTimerMenu && (
+                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 shadow-xl rounded-xl p-2 z-50 w-36 space-y-1 animate-in fade-in zoom-in-95 duration-150">
+                            <div className="text-[10px] uppercase font-semibold tracking-wider text-slate-400 px-2 py-1 border-b border-slate-700/60">
+                                Tin nhắn tự hủy
+                            </div>
+                            {[
+                                { value: 0, label: "Tắt" },
+                                { value: 10, label: "10 giây" },
+                                { value: 30, label: "30 giây" },
+                                { value: 60, label: "1 phút" },
+                                { value: 300, label: "5 phút" },
+                            ].map((opt) => (
+                                <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => {
+                                        setDisappearingOption(opt.value);
+                                        setShowTimerMenu(false);
+                                    }}
+                                    className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs transition-colors flex items-center justify-between ${
+                                        disappearingOption === opt.value
+                                            ? "bg-amber-500/20 text-amber-400 font-semibold"
+                                            : "text-slate-300 hover:bg-slate-700"
+                                    }`}
+                                >
+                                    <span>{opt.label}</span>
+                                    {disappearingOption === opt.value && <span className="text-amber-400 font-bold">✓</span>}
+                                </button>
+                            ))}
+                        </div>
                     )}
                 </div>
 

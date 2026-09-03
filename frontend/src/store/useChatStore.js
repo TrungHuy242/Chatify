@@ -21,6 +21,7 @@ export const useChatStore = create((set, get) => ({
     searchQuery: "",
     isChatInfoOpen: false,
     sidebarSearchTerm: "",
+    disappearingOption: 0,
 
     toggleSound: () => {
         localStorage.setItem("isSoundEnabled", !get().isSoundEnabled);
@@ -33,6 +34,9 @@ export const useChatStore = create((set, get) => ({
     setIsSearching: (isSearching) => set({ isSearching }),
     setSearchQuery: (searchQuery) => set({ searchQuery }),
     setSidebarSearchTerm: (sidebarSearchTerm) => set({ sidebarSearchTerm }),
+    setDisappearingOption: (disappearingOption) => set({ disappearingOption }),
+    removeExpiredMessage: (messageId) =>
+        set((state) => ({ messages: state.messages.filter((m) => m._id !== messageId) })),
     setIsChatInfoOpen: (isChatInfoOpen) => set({ isChatInfoOpen }),
     toggleChatInfo: () => set((state) => ({ isChatInfoOpen: !state.isChatInfoOpen })),
     setSelectedUser: (selectedUser) => {
@@ -132,8 +136,12 @@ export const useChatStore = create((set, get) => ({
     },
 
     sendMessage: async (messageData) => {
-        const { selectedUser, messages, replyingTo } = get();
+        const { selectedUser, messages, replyingTo, disappearingOption } = get();
         const { authUser } = useAuthStore.getState();
+
+        if (disappearingOption && disappearingOption > 0) {
+            messageData.disappearingTime = disappearingOption;
+        }
 
         const tempId = `temp-${Date.now()}`;
 
@@ -147,6 +155,10 @@ export const useChatStore = create((set, get) => ({
             fileUrl: messageData.file ? "uploading" : undefined,
             fileName: messageData.fileName,
             fileSize: messageData.fileSize,
+            disappearingTime: messageData.disappearingTime,
+            expiresAt: messageData.disappearingTime
+                ? new Date(Date.now() + messageData.disappearingTime * 1000).toISOString()
+                : null,
             createdAt: new Date().toISOString(),
             isOptimistic: true, // flag to identify optimistic messages (optional)
             replyTo: replyingTo || null,

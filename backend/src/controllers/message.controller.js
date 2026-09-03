@@ -27,6 +27,15 @@ export const getMessagesByUserId = async (req, res) => {
                 { senderId: myId, receiverId: userToChatId },
                 { senderId: userToChatId, receiverId: myId },
             ],
+            $and: [
+                {
+                    $or: [
+                        { expiresAt: { $exists: false } },
+                        { expiresAt: null },
+                        { expiresAt: { $gt: new Date() } },
+                    ],
+                },
+            ],
         };
 
         if (cursor) {
@@ -56,7 +65,7 @@ export const getMessagesByUserId = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
     try {
-        const { text, image, audio, file, fileName, fileSize, replyTo } = req.body;
+        const { text, image, audio, file, fileName, fileSize, replyTo, disappearingTime } = req.body;
         const { id: receiverId } = req.params;
         const senderId = req.user._id;
 
@@ -103,6 +112,11 @@ export const sendMessage = async (req, res) => {
             initialStatus = "delivered";
         }
 
+        let calculatedExpiresAt = null;
+        if (disappearingTime && Number(disappearingTime) > 0) {
+            calculatedExpiresAt = new Date(Date.now() + Number(disappearingTime) * 1000);
+        }
+
         const newMessage = new Message({
             senderId,
             receiverId,
@@ -112,6 +126,8 @@ export const sendMessage = async (req, res) => {
             fileUrl,
             fileName: fileName || "document",
             fileSize: fileSize || 0,
+            disappearingTime: disappearingTime ? Number(disappearingTime) : null,
+            expiresAt: calculatedExpiresAt,
             status: initialStatus,
             replyTo: replyTo || null,
         });

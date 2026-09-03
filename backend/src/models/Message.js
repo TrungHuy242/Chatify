@@ -54,6 +54,14 @@ const messageSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    disappearingTime: {
+      type: Number,
+      default: null,
+    },
+    expiresAt: {
+      type: Date,
+      default: null,
+    },
     reactions: [
       {
         userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
@@ -63,6 +71,8 @@ const messageSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+messageSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 const Message = mongoose.model("Message", messageSchema);
 

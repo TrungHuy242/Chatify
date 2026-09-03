@@ -10,6 +10,44 @@ import NoChatHistoryPlaceholder from "./NoChatHistoryPlaceholder";
 import MessageInput from "./MessageInput";
 import MessagesLoadingSkeleton from "./MessagesLoadingSkeleton";
 
+function DisappearingTimerBadge({ expiresAt, onExpire }) {
+    const [timeLeft, setTimeLeft] = useState(() => {
+        if (!expiresAt) return 0;
+        return Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 1000));
+    });
+
+    useEffect(() => {
+        if (!expiresAt) return;
+        const interval = setInterval(() => {
+            const remaining = Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 1000));
+            setTimeLeft(remaining);
+            if (remaining <= 0) {
+                clearInterval(interval);
+                onExpire();
+            }
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [expiresAt, onExpire]);
+
+    if (timeLeft <= 0) return null;
+
+    const formatCountdown = (seconds) => {
+        if (seconds >= 60) {
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${m}m${s > 0 ? `${s}s` : ""}`;
+        }
+        return `${seconds}s`;
+    };
+
+    return (
+        <span className="inline-flex items-center gap-0.5 text-[10px] text-amber-300 bg-amber-500/20 border border-amber-500/30 px-1.5 py-0.5 rounded-full font-mono mr-1 animate-pulse" title="Tin nhắn tự hủy">
+            ⏳ {formatCountdown(timeLeft)}
+        </span>
+    );
+}
+
 function ChatContainer() {
     const {
         selectedUser,
@@ -32,6 +70,7 @@ function ChatContainer() {
         searchQuery,
         isChatInfoOpen,
         setIsChatInfoOpen,
+        removeExpiredMessage,
     } = useChatStore();
     const { authUser } = useAuthStore();
     const messageEndRef = useRef(null);
@@ -497,6 +536,12 @@ function ChatContainer() {
                                     
                                     {!msg.isRevoked && (
                                         <p className="text-xs mt-1 opacity-75 flex items-center justify-end gap-1">
+                                            {msg.expiresAt && (
+                                                <DisappearingTimerBadge
+                                                    expiresAt={msg.expiresAt}
+                                                    onExpire={() => removeExpiredMessage(msg._id)}
+                                                />
+                                            )}
                                             {msg.isEdited && (
                                                 <span className="text-[10px] text-slate-300/70 italic mr-1">
                                                     (đã chỉnh sửa)
