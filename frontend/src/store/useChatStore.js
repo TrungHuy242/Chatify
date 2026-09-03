@@ -18,6 +18,7 @@ export const useChatStore = create((set, get) => ({
     isSoundEnabled: JSON.parse(localStorage.getItem("isSoundEnabled")) === true,
     isSearching: false,
     searchQuery: "",
+    isChatInfoOpen: false,
 
     toggleSound: () => {
         localStorage.setItem("isSoundEnabled", !get().isSoundEnabled);
@@ -29,8 +30,10 @@ export const useChatStore = create((set, get) => ({
     clearReplyingTo: () => set({ replyingTo: null }),
     setIsSearching: (isSearching) => set({ isSearching }),
     setSearchQuery: (searchQuery) => set({ searchQuery }),
+    setIsChatInfoOpen: (isChatInfoOpen) => set({ isChatInfoOpen }),
+    toggleChatInfo: () => set((state) => ({ isChatInfoOpen: !state.isChatInfoOpen })),
     setSelectedUser: (selectedUser) => {
-        set({ selectedUser });
+        set({ selectedUser, isChatInfoOpen: false });
         if (selectedUser) {
             const state = get();
             const chatIndex = state.chats.findIndex((c) => c._id === selectedUser._id);

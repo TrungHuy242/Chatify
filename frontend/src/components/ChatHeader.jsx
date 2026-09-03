@@ -1,10 +1,20 @@
-import { XIcon, SearchIcon } from "lucide-react";
+import { XIcon, SearchIcon, Info } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 import { useEffect, useRef } from "react";
 import { useAuthStore } from "../store/useAuthStore";
 
 function ChatHeader() {
-    const { selectedUser, setSelectedUser, typingUsers, isSearching, setIsSearching, searchQuery, setSearchQuery } = useChatStore();
+    const { 
+        selectedUser, 
+        setSelectedUser, 
+        typingUsers, 
+        isSearching, 
+        setIsSearching, 
+        searchQuery, 
+        setSearchQuery,
+        isChatInfoOpen,
+        toggleChatInfo,
+    } = useChatStore();
     const { onlineUsers } = useAuthStore();
     const searchInputRef = useRef(null);
     const isOnline = onlineUsers.includes(selectedUser._id);
@@ -52,12 +62,20 @@ function ChatHeader() {
                 </div>
             </div>
 
-            <div className="flex items-center space-x-2 sm:space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-3">
                 <button 
                     onClick={handleToggleSearch}
-                    className={`p-2 rounded-full transition-colors ${isSearching ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'}`}
+                    className={`p-2 rounded-full transition-colors tooltip tooltip-bottom ${isSearching ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'}`}
+                    data-tip="Tìm kiếm tin nhắn"
                 >
                     <SearchIcon className="w-5 h-5" />
+                </button>
+                <button 
+                    onClick={toggleChatInfo}
+                    className={`p-2 rounded-full transition-colors tooltip tooltip-bottom ${isChatInfoOpen ? 'bg-cyan-500/20 text-cyan-400' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'}`}
+                    data-tip="Thông tin cuộc trò chuyện"
+                >
+                    <Info className="w-5 h-5" />
                 </button>
                 <button onClick={() => setSelectedUser(null)}>
                     <XIcon className="w-5 h-5 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" />

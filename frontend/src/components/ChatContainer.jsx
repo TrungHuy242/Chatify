@@ -4,6 +4,7 @@ import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import toast from "react-hot-toast";
 import ImageModal from "./ImageModal";
+import ChatInfoSidebar from "./ChatInfoSidebar";
 import ChatHeader from "./ChatHeader";
 import NoChatHistoryPlaceholder from "./NoChatHistoryPlaceholder";
 import MessageInput from "./MessageInput";
@@ -29,6 +30,8 @@ function ChatContainer() {
         editMessage,
         isSearching,
         searchQuery,
+        isChatInfoOpen,
+        setIsChatInfoOpen,
     } = useChatStore();
     const { authUser } = useAuthStore();
     const messageEndRef = useRef(null);
@@ -187,9 +190,13 @@ function ChatContainer() {
     };
 
     return (
-        <>
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
             <ChatHeader />
-            {pinnedMessage && (
+
+            <div className="flex-1 flex overflow-hidden">
+                {/* Main Chat Column */}
+                <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+                    {pinnedMessage && (
                 <div className="bg-slate-800/90 backdrop-blur border-b border-cyan-500/30 px-6 py-2 flex items-center justify-between text-xs z-10 transition-all shadow-sm">
                     <div 
                         onClick={() => scrollToMessage(pinnedMessage._id)} 
@@ -535,7 +542,18 @@ function ChatContainer() {
                 )}
             </div>
 
-            <MessageInput />
+                    <MessageInput />
+                </div>
+
+                {/* Right Chat Info Sidebar */}
+                {isChatInfoOpen && (
+                    <ChatInfoSidebar
+                        onClose={() => setIsChatInfoOpen(false)}
+                        onPreviewImage={(url) => setPreviewImageUrl(url)}
+                        onScrollToMessage={(id) => scrollToMessage(id)}
+                    />
+                )}
+            </div>
 
             {previewImageUrl && (
                 <ImageModal
@@ -543,7 +561,7 @@ function ChatContainer() {
                     onClose={() => setPreviewImageUrl(null)}
                 />
             )}
-        </>
+        </div>
     );
 }
 
