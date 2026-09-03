@@ -2,6 +2,7 @@ import { XIcon, SearchIcon, Info } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 import { useEffect, useRef } from "react";
 import { useAuthStore } from "../store/useAuthStore";
+import { getDisplayName } from "../lib/nicknameHelper";
 
 function ChatHeader() {
     const { 
@@ -15,10 +16,11 @@ function ChatHeader() {
         isChatInfoOpen,
         toggleChatInfo,
     } = useChatStore();
-    const { onlineUsers } = useAuthStore();
+    const { onlineUsers, authUser } = useAuthStore();
     const searchInputRef = useRef(null);
     const isOnline = onlineUsers.includes(selectedUser._id);
     const isTyping = typingUsers.includes(selectedUser._id);
+    const displayName = getDisplayName(selectedUser, authUser);
 
     useEffect(() => {
         const handleEscKey = (event) => {
@@ -57,7 +59,12 @@ function ChatHeader() {
                 </div>
 
                 <div>
-                    <h3 className="text-slate-200 font-medium">{selectedUser.fullName}</h3>
+                    <h3 className="text-slate-200 font-medium flex items-center gap-1.5">
+                        <span>{displayName}</span>
+                        {displayName !== selectedUser.fullName && (
+                            <span className="text-xs text-slate-400 font-normal">({selectedUser.fullName})</span>
+                        )}
+                    </h3>
                     <p className="text-slate-400 text-sm">{isOnline ? "Online" : "Offline"}</p>
                 </div>
             </div>

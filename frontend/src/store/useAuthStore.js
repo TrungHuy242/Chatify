@@ -101,4 +101,9 @@ export const useAuthStore = create((set, get) => ({
   disconnectSocket: () => {
     if (get().socket?.connected) get().socket.disconnect();
   },
+
+  updateNicknames: (nicknames) =>
+    set((state) => ({
+      authUser: state.authUser ? { ...state.authUser, nicknames } : null,
+    })),
 }));

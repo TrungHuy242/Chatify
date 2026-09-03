@@ -1,17 +1,31 @@
 import { useState } from "react";
-import { X, Image as ImageIcon, FileText, FileSpreadsheet, FileArchive, File, Pin, PinOff, Download, ChevronDown, ChevronRight } from "lucide-react";
+import { X, Image as ImageIcon, FileText, FileSpreadsheet, FileArchive, File, Pin, PinOff, Download, ChevronDown, ChevronRight, Pencil, Check } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import toast from "react-hot-toast";
 
 function ChatInfoSidebar({ onClose, onPreviewImage, onScrollToMessage }) {
-    const { selectedUser, messages, togglePinMessage } = useChatStore();
-    const { onlineUsers } = useAuthStore();
+    const { selectedUser, messages, togglePinMessage, setNickname } = useChatStore();
+    const { onlineUsers, authUser } = useAuthStore();
 
     // Collapsible sections state
     const [isMediaOpen, setIsMediaOpen] = useState(true);
     const [isFilesOpen, setIsFilesOpen] = useState(true);
     const [isPinnedOpen, setIsPinnedOpen] = useState(true);
+
+    // Nickname edit state
+    const [isEditingNickname, setIsEditingNickname] = useState(false);
+    const [tempNickname, setTempNickname] = useState("");
+
+    const currentNickname = authUser?.nicknames?.find(
+        (n) => n.userId === selectedUser?._id || n.userId?.toString() === selectedUser?._id?.toString()
+    )?.nickname || "";
+
+    const handleSaveNickname = async () => {
+        if (!selectedUser) return;
+        await setNickname(selectedUser._id, tempNickname);
+        setIsEditingNickname(false);
+    };
 
     if (!selectedUser) return null;
 
@@ -96,6 +110,58 @@ function ChatInfoSidebar({ onClose, onPreviewImage, onScrollToMessage }) {
                     <span className="inline-block mt-2 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-800 text-cyan-400 border border-slate-700">
                         {isOnline ? "Đang hoạt động" : "Ngoại tuyến"}
                     </span>
+
+                    {/* Nickname Editor */}
+                    <div className="mt-3 w-full px-2">
+                        {isEditingNickname ? (
+                            <div className="flex items-center gap-1.5 justify-center">
+                                <input
+                                    type="text"
+                                    value={tempNickname}
+                                    onChange={(e) => setTempNickname(e.target.value)}
+                                    placeholder="Nhập biệt danh..."
+                                    className="bg-slate-800 border border-cyan-500/50 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500 w-36 text-center"
+                                    autoFocus
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") handleSaveNickname();
+                                        if (e.key === "Escape") setIsEditingNickname(false);
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={handleSaveNickname}
+                                    className="p-1 rounded-md bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500 hover:text-white transition-colors"
+                                    title="Lưu"
+                                >
+                                    <Check className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsEditingNickname(false)}
+                                    className="p-1 rounded-md bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                                    title="Hủy"
+                                >
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-center gap-2 text-xs">
+                                <span className="text-slate-400">Biệt danh:</span>
+                                <span className="text-cyan-300 font-medium">{currentNickname || "Chưa đặt"}</span>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setTempNickname(currentNickname || "");
+                                        setIsEditingNickname(true);
+                                    }}
+                                    className="p-1 rounded text-slate-400 hover:text-cyan-400 hover:bg-slate-800 transition-colors"
+                                    title="Chỉnh sửa biệt danh"
+                                >
+                                    <Pencil className="w-3 h-3" />
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Section 1: Shared Media / Photos */}

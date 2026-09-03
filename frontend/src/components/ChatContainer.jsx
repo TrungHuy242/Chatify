@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, CheckCheck, Trash2, Reply, SmilePlus, Pin, PinOff, Pencil, ZoomIn, Copy, Download, FileText, FileSpreadsheet, FileArchive, File } from "lucide-react";
+import { Check, CheckCheck, Trash2, Reply, SmilePlus, Pin, PinOff, Pencil, ZoomIn, Copy, Download, FileText, FileSpreadsheet, FileArchive, File, RotateCcw } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import toast from "react-hot-toast";
@@ -71,6 +71,7 @@ function ChatContainer() {
         isChatInfoOpen,
         setIsChatInfoOpen,
         removeExpiredMessage,
+        deleteMessageForMe,
     } = useChatStore();
     const { authUser } = useAuthStore();
     const messageEndRef = useRef(null);
@@ -84,6 +85,7 @@ function ChatContainer() {
     const [editingText, setEditingText] = useState("");
     const [previewImageUrl, setPreviewImageUrl] = useState(null);
     const [copiedMessageId, setCopiedMessageId] = useState(null);
+    const [messageToDeleteForMe, setMessageToDeleteForMe] = useState(null);
     const emojis = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
     const isTyping = typingUsers.includes(selectedUser?._id);
@@ -370,12 +372,20 @@ function ChatContainer() {
                                         {msg.senderId === authUser._id && (
                                             <button
                                                 onClick={() => revokeMessage(msg._id)}
-                                                className="text-slate-400 hover:text-red-400 p-1 rounded transition-colors tooltip tooltip-top tooltip-error"
-                                                data-tip="Thu hồi"
+                                                className="text-slate-400 hover:text-amber-400 p-1 rounded transition-colors tooltip tooltip-top"
+                                                data-tip="Thu hồi (cả 2 bên)"
                                             >
-                                                <Trash2 className="w-4 h-4" />
+                                                <RotateCcw className="w-4 h-4" />
                                             </button>
                                         )}
+
+                                        <button
+                                            onClick={() => setMessageToDeleteForMe(msg)}
+                                            className="text-slate-400 hover:text-red-400 p-1 rounded transition-colors tooltip tooltip-top tooltip-error"
+                                            data-tip="Xóa ở phía tôi"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
                                     </div>
                                 )}
                                 
@@ -600,11 +610,48 @@ function ChatContainer() {
                 )}
             </div>
 
+            {/* Lightbox Modal */}
             {previewImageUrl && (
                 <ImageModal
                     imageUrl={previewImageUrl}
                     onClose={() => setPreviewImageUrl(null)}
                 />
+            )}
+
+            {/* Modal xác nhận Xóa ở phía tôi */}
+            {messageToDeleteForMe && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
+                    <div className="bg-slate-800 border border-slate-700 rounded-2xl p-5 max-w-sm w-full shadow-2xl space-y-4">
+                        <div className="flex items-center gap-3 text-red-400">
+                            <div className="p-2.5 rounded-full bg-red-500/10">
+                                <Trash2 className="w-5 h-5" />
+                            </div>
+                            <h3 className="font-semibold text-slate-100 text-base">Xóa tin nhắn ở phía bạn?</h3>
+                        </div>
+                        <p className="text-xs text-slate-300 leading-relaxed">
+                            Tin nhắn này sẽ bị xóa khỏi màn hình của bạn. Đối phương vẫn sẽ nhìn thấy tin nhắn này bình thường.
+                        </p>
+                        <div className="flex items-center justify-end gap-2 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setMessageToDeleteForMe(null)}
+                                className="px-3.5 py-1.5 rounded-xl text-xs text-slate-300 hover:bg-slate-700 transition-colors"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    await deleteMessageForMe(messageToDeleteForMe._id);
+                                    setMessageToDeleteForMe(null);
+                                }}
+                                className="px-4 py-1.5 rounded-xl text-xs font-medium bg-red-500 hover:bg-red-600 text-white transition-colors shadow-sm shadow-red-500/30"
+                            >
+                                Xóa ở phía tôi
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

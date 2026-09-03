@@ -22,6 +22,7 @@ export const useChatStore = create((set, get) => ({
     isChatInfoOpen: false,
     sidebarSearchTerm: "",
     disappearingOption: 0,
+    showOnlyOnline: false,
 
     toggleSound: () => {
         localStorage.setItem("isSoundEnabled", !get().isSoundEnabled);
@@ -35,6 +36,8 @@ export const useChatStore = create((set, get) => ({
     setSearchQuery: (searchQuery) => set({ searchQuery }),
     setSidebarSearchTerm: (sidebarSearchTerm) => set({ sidebarSearchTerm }),
     setDisappearingOption: (disappearingOption) => set({ disappearingOption }),
+    setShowOnlyOnline: (showOnlyOnline) => set({ showOnlyOnline }),
+    toggleShowOnlyOnline: () => set((state) => ({ showOnlyOnline: !state.showOnlyOnline })),
     removeExpiredMessage: (messageId) =>
         set((state) => ({ messages: state.messages.filter((m) => m._id !== messageId) })),
     setIsChatInfoOpen: (isChatInfoOpen) => set({ isChatInfoOpen }),
@@ -259,6 +262,30 @@ export const useChatStore = create((set, get) => ({
             toast.success("Đã cập nhật tin nhắn");
         } catch (error) {
             toast.error(error.response?.data?.error || error.response?.data?.message || "Chỉnh sửa thất bại");
+        }
+    },
+
+    deleteMessageForMe: async (messageId) => {
+        try {
+            await axiosInstance.post(`/messages/${messageId}/delete-for-me`);
+            set((state) => ({
+                messages: state.messages.filter((msg) => msg._id !== messageId),
+            }));
+            toast.success("Đã xóa tin nhắn ở phía bạn");
+        } catch (error) {
+            console.error("Error deleting message for me:", error);
+            toast.error(error.response?.data?.message || "Không thể xóa tin nhắn");
+        }
+    },
+
+    setNickname: async (targetUserId, nickname) => {
+        try {
+            const res = await axiosInstance.post(`/messages/nickname/${targetUserId}`, { nickname });
+            useAuthStore.getState().updateNicknames(res.data.nicknames);
+            toast.success(nickname ? "Đã đặt biệt danh" : "Đã gỡ biệt danh");
+        } catch (error) {
+            console.error("Error setting nickname:", error);
+            toast.error("Không thể cập nhật biệt danh");
         }
     },
 

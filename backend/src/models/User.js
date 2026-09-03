@@ -18,7 +18,19 @@ const userSchema = new mongoose.Schema({
     profilePic: {
         type: String,
         default: "",
-    }
+    },
+    nicknames: [
+        {
+            userId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User",
+            },
+            nickname: {
+                type: String,
+                trim: true,
+            },
+        },
+    ],
 }, {
     timestamps: true // createdAt, updatedAt
 });

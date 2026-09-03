@@ -27,6 +27,7 @@ export const getMessagesByUserId = async (req, res) => {
                 { senderId: myId, receiverId: userToChatId },
                 { senderId: userToChatId, receiverId: myId },
             ],
+            deletedFor: { $ne: myId },
             $and: [
                 {
                     $or: [
@@ -413,6 +414,74 @@ export const editMessage = async (req, res) => {
         res.status(200).json(message);
     } catch (error) {
         console.log("Error in editMessage controller: ", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export const deleteMessageForMe = async (req, res) => {
+    try {
+        const { id: messageId } = req.params;
+        const myId = req.user._id;
+
+        const message = await Message.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ error: "Message not found" });
+        }
+
+        // Add myId to deletedFor array
+        await Message.findByIdAndUpdate(messageId, {
+            $addToSet: { deletedFor: myId }
+        });
+
+        res.status(200).json({ message: "Message deleted for me successfully", messageId });
+    } catch (error) {
+        console.error("Error in deleteMessageForMe controller: ", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+export const setNickname = async (req, res) => {
+    try {
+        const { id: targetUserId } = req.params;
+        const { nickname } = req.body;
+        const myId = req.user._id;
+
+        const user = await User.findById(myId);
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        if (!user.nicknames) {
+            user.nicknames = [];
+        }
+
+        const existingIndex = user.nicknames.findIndex(
+            (n) => n.userId.toString() === targetUserId.toString()
+        );
+
+        const cleanNickname = nickname ? nickname.trim() : "";
+
+        if (cleanNickname) {
+            if (existingIndex !== -1) {
+                user.nicknames[existingIndex].nickname = cleanNickname;
+            } else {
+                user.nicknames.push({ userId: targetUserId, nickname: cleanNickname });
+            }
+        } else {
+            // Remove nickname if empty
+            if (existingIndex !== -1) {
+                user.nicknames.splice(existingIndex, 1);
+            }
+        }
+
+        await user.save();
+
+        res.status(200).json({
+            message: "Nickname updated successfully",
+            nicknames: user.nicknames,
+        });
+    } catch (error) {
+        console.error("Error in setNickname controller: ", error.message);
         res.status(500).json({ error: "Internal server error" });
     }
 };
