@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, CheckCheck, Trash2, Reply, SmilePlus, Pin, PinOff, Pencil } from "lucide-react";
+import { Check, CheckCheck, Trash2, Reply, SmilePlus, Pin, PinOff, Pencil, ZoomIn } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import toast from "react-hot-toast";
+import ImageModal from "./ImageModal";
 import ChatHeader from "./ChatHeader";
 import NoChatHistoryPlaceholder from "./NoChatHistoryPlaceholder";
 import MessageInput from "./MessageInput";
@@ -39,6 +40,7 @@ function ChatContainer() {
     const [highlightedMessageId, setHighlightedMessageId] = useState(null);
     const [editingMessageId, setEditingMessageId] = useState(null);
     const [editingText, setEditingText] = useState("");
+    const [previewImageUrl, setPreviewImageUrl] = useState(null);
     const emojis = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
     const isTyping = typingUsers.includes(selectedUser?._id);
@@ -293,7 +295,21 @@ function ChatContainer() {
                                             )}
 
                                             {msg.image && (
-                                                <img src={msg.image} alt="Shared" className="rounded-lg h-48 object-cover" />
+                                                <div
+                                                    onClick={() => setPreviewImageUrl(msg.image)}
+                                                    className="relative group/img cursor-pointer overflow-hidden rounded-lg mt-1 inline-block"
+                                                >
+                                                    <img
+                                                        src={msg.image}
+                                                        alt="Shared"
+                                                        className="rounded-lg h-48 w-auto max-w-xs object-cover transition-transform duration-300 group-hover/img:scale-105"
+                                                    />
+                                                    <div className="absolute inset-0 bg-black/35 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                                                        <span className="bg-black/60 backdrop-blur-sm text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-md">
+                                                            <ZoomIn className="w-3.5 h-3.5" /> Phóng to
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             )}
                                             {msg.audio && (
                                                 <audio src={msg.audio} controls className="h-10 w-[200px]" />
@@ -398,6 +414,13 @@ function ChatContainer() {
             </div>
 
             <MessageInput />
+
+            {previewImageUrl && (
+                <ImageModal
+                    imageUrl={previewImageUrl}
+                    onClose={() => setPreviewImageUrl(null)}
+                />
+            )}
         </>
     );
 }
