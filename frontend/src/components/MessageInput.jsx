@@ -3,7 +3,8 @@ import useKeyboardSound from "../hooks/useKeyboardSound";
 import { useChatStore } from "../store/useChatStore";
 import toast from "react-hot-toast";
 import { useAuthStore } from "../store/useAuthStore";
-import { ImageIcon, SendIcon, XIcon, Mic, Square, Trash2 } from "lucide-react";
+import { ImageIcon, SendIcon, XIcon, Mic, Square, Trash2, Smile } from "lucide-react";
+import EmojiPicker from "./EmojiPicker";
 
 function MessageInput() {
     const { playRandomKeyStrokeSound } = useKeyboardSound();
@@ -12,9 +13,11 @@ function MessageInput() {
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
     const [audioData, setAudioData] = useState(null); // base64
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
     const typingTimeoutRef = useRef(null);
     const fileInputRef = useRef(null);
+    const textInputRef = useRef(null);
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
     const timerRef = useRef(null);
@@ -35,6 +38,7 @@ function MessageInput() {
         setText("");
         setImagePreview(null);
         setAudioData(null);
+        setShowEmojiPicker(false);
         if (fileInputRef.current) fileInputRef.current.value = "";
 
         if (socket && selectedUser) {
@@ -113,6 +117,23 @@ function MessageInput() {
         const m = Math.floor(seconds / 60);
         const s = seconds % 60;
         return `${m}:${s < 10 ? "0" : ""}${s}`;
+    };
+
+    const handleEmojiSelect = (emoji) => {
+        const input = textInputRef.current;
+        if (!input) {
+            setText((prev) => prev + emoji);
+            return;
+        }
+        const start = input.selectionStart || 0;
+        const end = input.selectionEnd || 0;
+        const newText = text.substring(0, start) + emoji + text.substring(end);
+        setText(newText);
+
+        setTimeout(() => {
+            input.focus();
+            input.setSelectionRange(start + emoji.length, start + emoji.length);
+        }, 0);
     };
 
     return (
@@ -196,6 +217,7 @@ function MessageInput() {
                     </div>
                 ) : (
                     <input
+                        ref={textInputRef}
                         type="text"
                         value={text}
                     onChange={(e) => {
@@ -225,12 +247,36 @@ function MessageInput() {
                     className="hidden"
                 />
 
+                <div className="relative">
+                    <button
+                        type="button"
+                        onClick={() => setShowEmojiPicker((prev) => !prev)}
+                        className={`bg-slate-800/50 rounded-lg px-3 sm:px-4 py-2 transition-colors flex items-center justify-center ${
+                            showEmojiPicker
+                                ? "text-cyan-400 bg-slate-700/60"
+                                : "text-slate-400 hover:text-slate-200"
+                        }`}
+                        disabled={isRecording}
+                        title="Chọn biểu tượng cảm xúc"
+                    >
+                        <Smile className="w-5 h-5" />
+                    </button>
+
+                    {showEmojiPicker && (
+                        <EmojiPicker
+                            onSelectEmoji={handleEmojiSelect}
+                            onClose={() => setShowEmojiPicker(false)}
+                        />
+                    )}
+                </div>
+
                 <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     className={`bg-slate-800/50 text-slate-400 hover:text-slate-200 rounded-lg px-3 sm:px-4 transition-colors ${imagePreview ? "text-cyan-500" : ""
                         }`}
                     disabled={isRecording || audioData}
+                    title="Gửi hình ảnh"
                 >
                     <ImageIcon className="w-5 h-5" />
                 </button>
