@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, CheckCheck, Trash2, Reply, SmilePlus, Pin, PinOff, Pencil, ZoomIn } from "lucide-react";
+import { Check, CheckCheck, Trash2, Reply, SmilePlus, Pin, PinOff, Pencil, ZoomIn, Copy } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import toast from "react-hot-toast";
@@ -41,6 +41,7 @@ function ChatContainer() {
     const [editingMessageId, setEditingMessageId] = useState(null);
     const [editingText, setEditingText] = useState("");
     const [previewImageUrl, setPreviewImageUrl] = useState(null);
+    const [copiedMessageId, setCopiedMessageId] = useState(null);
     const emojis = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
     const isTyping = typingUsers.includes(selectedUser?._id);
@@ -124,6 +125,20 @@ function ChatContainer() {
         }
         editMessage(msgId, editingText.trim());
         setEditingMessageId(null);
+    };
+
+    const handleCopyText = (messageId, text) => {
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(() => {
+            setCopiedMessageId(messageId);
+            toast.success("Đã sao chép vào bộ nhớ tạm");
+            setTimeout(() => {
+                setCopiedMessageId(null);
+            }, 1500);
+        }).catch((err) => {
+            console.error("Copy failed:", err);
+            toast.error("Không thể sao chép");
+        });
     };
 
     return (
@@ -230,6 +245,24 @@ function ChatContainer() {
                                         >
                                             <Pin className={`w-4 h-4 ${msg.isPinned ? "fill-cyan-400" : ""}`} />
                                         </button>
+
+                                        {msg.text && (
+                                            <button
+                                                onClick={() => handleCopyText(msg._id, msg.text)}
+                                                className={`p-1 rounded transition-colors tooltip tooltip-top ${
+                                                    copiedMessageId === msg._id
+                                                        ? "text-green-400"
+                                                        : "text-slate-400 hover:text-cyan-400"
+                                                }`}
+                                                data-tip={copiedMessageId === msg._id ? "Đã chép!" : "Sao chép"}
+                                            >
+                                                {copiedMessageId === msg._id ? (
+                                                    <Check className="w-4 h-4 text-green-400" />
+                                                ) : (
+                                                    <Copy className="w-4 h-4" />
+                                                )}
+                                            </button>
+                                        )}
 
                                         {msg.senderId === authUser._id && msg.text && (
                                             <button
