@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, CheckCheck, Trash2, Reply, SmilePlus, Pin, PinOff } from "lucide-react";
+import { Check, CheckCheck, Trash2, Reply, SmilePlus, Pin, PinOff, Pencil } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
+import toast from "react-hot-toast";
 import ChatHeader from "./ChatHeader";
 import NoChatHistoryPlaceholder from "./NoChatHistoryPlaceholder";
 import MessageInput from "./MessageInput";
@@ -24,6 +25,7 @@ function ChatContainer() {
         setReplyingTo,
         reactToMessage,
         togglePinMessage,
+        editMessage,
         isSearching,
         searchQuery,
     } = useChatStore();
@@ -35,6 +37,8 @@ function ChatContainer() {
     
     const [activeReactionMessageId, setActiveReactionMessageId] = useState(null);
     const [highlightedMessageId, setHighlightedMessageId] = useState(null);
+    const [editingMessageId, setEditingMessageId] = useState(null);
+    const [editingText, setEditingText] = useState("");
     const emojis = ["👍", "❤️", "😂", "😮", "😢", "😡"];
 
     const isTyping = typingUsers.includes(selectedUser?._id);
@@ -100,6 +104,24 @@ function ChatContainer() {
                 setHighlightedMessageId(null);
             }, 2000);
         }
+    };
+
+    const handleStartEdit = (msg) => {
+        setEditingMessageId(msg._id);
+        setEditingText(msg.text || "");
+    };
+
+    const handleSaveEdit = (msgId, originalText) => {
+        if (!editingText.trim()) {
+            toast.error("Nội dung tin nhắn không được để trống");
+            return;
+        }
+        if (editingText.trim() === originalText) {
+            setEditingMessageId(null);
+            return;
+        }
+        editMessage(msgId, editingText.trim());
+        setEditingMessageId(null);
     };
 
     return (
@@ -207,6 +229,16 @@ function ChatContainer() {
                                             <Pin className={`w-4 h-4 ${msg.isPinned ? "fill-cyan-400" : ""}`} />
                                         </button>
 
+                                        {msg.senderId === authUser._id && msg.text && (
+                                            <button
+                                                onClick={() => handleStartEdit(msg)}
+                                                className="text-slate-400 hover:text-cyan-400 p-1 rounded transition-colors tooltip tooltip-top"
+                                                data-tip="Chỉnh sửa"
+                                            >
+                                                <Pencil className="w-4 h-4" />
+                                            </button>
+                                        )}
+
                                         {msg.senderId === authUser._id && (
                                             <button
                                                 onClick={() => revokeMessage(msg._id)}
@@ -266,7 +298,43 @@ function ChatContainer() {
                                             {msg.audio && (
                                                 <audio src={msg.audio} controls className="h-10 w-[200px]" />
                                             )}
-                                            {msg.text && <p className="mt-2">{highlightText(msg.text, searchQuery)}</p>}
+                                            {editingMessageId === msg._id ? (
+                                                <div className="flex flex-col gap-2 min-w-[200px] sm:min-w-[260px] pt-1">
+                                                    <textarea
+                                                        value={editingText}
+                                                        onChange={(e) => setEditingText(e.target.value)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === "Enter" && !e.shiftKey) {
+                                                                e.preventDefault();
+                                                                handleSaveEdit(msg._id, msg.text);
+                                                            } else if (e.key === "Escape") {
+                                                                setEditingMessageId(null);
+                                                            }
+                                                        }}
+                                                        className="w-full bg-slate-900/90 border border-cyan-500/60 rounded-lg p-2 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-cyan-400 resize-none"
+                                                        rows={2}
+                                                        autoFocus
+                                                    />
+                                                    <div className="flex items-center justify-end gap-1.5 text-xs">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setEditingMessageId(null)}
+                                                            className="px-2 py-0.5 rounded bg-slate-700/60 hover:bg-slate-700 text-slate-300 transition-colors"
+                                                        >
+                                                            Hủy (Esc)
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleSaveEdit(msg._id, msg.text)}
+                                                            className="px-2.5 py-0.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-medium transition-colors shadow-sm"
+                                                        >
+                                                            Lưu (Enter)
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                msg.text && <p className="mt-2">{highlightText(msg.text, searchQuery)}</p>
+                                            )}
                                         </>
                                     )}
                                     
@@ -284,6 +352,11 @@ function ChatContainer() {
                                     
                                     {!msg.isRevoked && (
                                         <p className="text-xs mt-1 opacity-75 flex items-center justify-end gap-1">
+                                            {msg.isEdited && (
+                                                <span className="text-[10px] text-slate-300/70 italic mr-1">
+                                                    (đã chỉnh sửa)
+                                                </span>
+                                            )}
                                             {new Date(msg.createdAt).toLocaleTimeString(undefined, {
                                                 hour: "2-digit",
                                                 minute: "2-digit",

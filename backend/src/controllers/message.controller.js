@@ -339,3 +339,49 @@ export const togglePinMessage = async (req, res) => {
         res.status(500).json({ error: "Internal server error" });
     }
 };
+
+export const editMessage = async (req, res) => {
+    try {
+        const { id: messageId } = req.params;
+        const { text } = req.body;
+        const myId = req.user._id;
+
+        if (!text || !text.trim()) {
+            return res.status(400).json({ error: "Message text cannot be empty" });
+        }
+
+        const message = await Message.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ error: "Message not found" });
+        }
+
+        if (message.isRevoked) {
+            return res.status(400).json({ error: "Cannot edit a revoked message" });
+        }
+
+        // Only the sender can edit their message
+        if (message.senderId.toString() !== myId.toString()) {
+            return res.status(403).json({ error: "You can only edit your own messages" });
+        }
+
+        message.text = text.trim();
+        message.isEdited = true;
+        await message.save();
+        await message.populate("replyTo", "text image audio senderId isRevoked");
+
+        // Emit socket event to the receiver
+        const receiverSocketId = getReceiverSocketId(message.receiverId);
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("messageEdited", {
+                messageId: message._id,
+                text: message.text,
+                isEdited: message.isEdited,
+            });
+        }
+
+        res.status(200).json(message);
+    } catch (error) {
+        console.log("Error in editMessage controller: ", error.message);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};

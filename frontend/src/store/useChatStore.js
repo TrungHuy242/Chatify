@@ -227,6 +227,20 @@ export const useChatStore = create((set, get) => ({
         }
     },
 
+    editMessage: async (messageId, text) => {
+        try {
+            const res = await axiosInstance.put(`/messages/${messageId}/edit`, { text });
+            set((state) => ({
+                messages: state.messages.map((msg) =>
+                    msg._id === messageId ? { ...msg, text: res.data.text, isEdited: true } : msg
+                ),
+            }));
+            toast.success("Đã cập nhật tin nhắn");
+        } catch (error) {
+            toast.error(error.response?.data?.error || error.response?.data?.message || "Chỉnh sửa thất bại");
+        }
+    },
+
     subscribeToMessages: () => {
         const socket = useAuthStore.getState().socket;
         if (!socket) return;
@@ -324,6 +338,15 @@ export const useChatStore = create((set, get) => ({
                 ),
             }));
         });
+
+        socket.off("messageEdited");
+        socket.on("messageEdited", ({ messageId, text, isEdited }) => {
+            set((state) => ({
+                messages: state.messages.map((msg) =>
+                    msg._id === messageId ? { ...msg, text, isEdited } : msg
+                ),
+            }));
+        });
     },
 
     unsubscribeFromMessages: () => {
@@ -334,6 +357,7 @@ export const useChatStore = create((set, get) => ({
         socket.off("messageRevoked");
         socket.off("messageReactionUpdated");
         socket.off("messagePinned");
+        socket.off("messageEdited");
     },
 
     subscribeToTyping: () => {
