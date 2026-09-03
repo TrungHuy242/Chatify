@@ -38,7 +38,7 @@ export const getMessagesByUserId = async (req, res) => {
         let messages = await Message.find(query)
             .sort({ createdAt: -1 })
             .limit(limit + 1)
-            .populate("replyTo", "text image senderId isRevoked");
+            .populate("replyTo", "text image audio fileUrl fileName senderId isRevoked");
 
         const hasMore = messages.length > limit;
         if (hasMore) {
@@ -56,12 +56,12 @@ export const getMessagesByUserId = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
     try {
-        const { text, image, audio, replyTo } = req.body;
+        const { text, image, audio, file, fileName, fileSize, replyTo } = req.body;
         const { id: receiverId } = req.params;
         const senderId = req.user._id;
 
-        if (!text && !image && !audio) {
-            return res.status(400).json({ message: "Text, image or audio is required." });
+        if (!text && !image && !audio && !file) {
+            return res.status(400).json({ message: "Text, image, audio or file is required." });
         }
         if (senderId.equals(receiverId)) {
             return res.status(400).json({ message: "Cannot send messages to yourself." });
@@ -87,6 +87,15 @@ export const sendMessage = async (req, res) => {
             audioUrl = uploadResponse.secure_url;
         }
 
+        let fileUrl;
+        if (file) {
+            // upload base64 raw document to cloudinary
+            const uploadResponse = await cloudinary.uploader.upload(file, {
+                resource_type: "raw",
+            });
+            fileUrl = uploadResponse.secure_url;
+        }
+
         const receiverSocketId = getReceiverSocketId(receiverId);
         
         let initialStatus = "sent";
@@ -100,12 +109,15 @@ export const sendMessage = async (req, res) => {
             text,
             image: imageUrl,
             audio: audioUrl,
+            fileUrl,
+            fileName: fileName || "document",
+            fileSize: fileSize || 0,
             status: initialStatus,
             replyTo: replyTo || null,
         });
 
         await newMessage.save();
-        await newMessage.populate("replyTo", "text image audio senderId isRevoked");
+        await newMessage.populate("replyTo", "text image audio fileUrl fileName senderId isRevoked");
 
         if (receiverSocketId) {
             io.to(receiverSocketId).emit("newMessage", newMessage);
@@ -233,6 +245,9 @@ export const revokeMessage = async (req, res) => {
         message.text = "";
         message.image = "";
         message.audio = "";
+        message.fileUrl = "";
+        message.fileName = "";
+        message.fileSize = 0;
         message.isPinned = false;
         await message.save();
 
@@ -321,7 +336,7 @@ export const togglePinMessage = async (req, res) => {
 
         message.isPinned = !message.isPinned;
         await message.save();
-        await message.populate("replyTo", "text image audio senderId isRevoked");
+        await message.populate("replyTo", "text image audio fileUrl fileName senderId isRevoked");
 
         // Emit socket event to the other participant
         const otherPersonId = message.senderId.toString() === myId.toString() ? message.receiverId : message.senderId;
@@ -367,7 +382,7 @@ export const editMessage = async (req, res) => {
         message.text = text.trim();
         message.isEdited = true;
         await message.save();
-        await message.populate("replyTo", "text image audio senderId isRevoked");
+        await message.populate("replyTo", "text image audio fileUrl fileName senderId isRevoked");
 
         // Emit socket event to the receiver
         const receiverSocketId = getReceiverSocketId(message.receiverId);

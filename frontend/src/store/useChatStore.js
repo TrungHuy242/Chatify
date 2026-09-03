@@ -138,6 +138,9 @@ export const useChatStore = create((set, get) => ({
             text: messageData.text,
             image: messageData.image,
             audio: messageData.audio,
+            fileUrl: messageData.file ? "uploading" : undefined,
+            fileName: messageData.fileName,
+            fileSize: messageData.fileSize,
             createdAt: new Date().toISOString(),
             isOptimistic: true, // flag to identify optimistic messages (optional)
             replyTo: replyingTo || null,

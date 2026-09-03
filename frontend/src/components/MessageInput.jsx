@@ -3,7 +3,7 @@ import useKeyboardSound from "../hooks/useKeyboardSound";
 import { useChatStore } from "../store/useChatStore";
 import toast from "react-hot-toast";
 import { useAuthStore } from "../store/useAuthStore";
-import { ImageIcon, SendIcon, XIcon, Mic, Square, Trash2, Smile } from "lucide-react";
+import { ImageIcon, SendIcon, XIcon, Mic, Square, Trash2, Smile, Paperclip, FileText } from "lucide-react";
 import EmojiPicker from "./EmojiPicker";
 
 function MessageInput() {
@@ -13,10 +13,14 @@ function MessageInput() {
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
     const [audioData, setAudioData] = useState(null); // base64
+    const [fileData, setFileData] = useState(null); // base64
+    const [fileName, setFileName] = useState("");
+    const [fileSize, setFileSize] = useState(0);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
     const typingTimeoutRef = useRef(null);
     const fileInputRef = useRef(null);
+    const fileAttachmentRef = useRef(null);
     const textInputRef = useRef(null);
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
@@ -27,19 +31,26 @@ function MessageInput() {
 
     const handleSendMessage = (e) => {
         if (e) e.preventDefault();
-        if (!text.trim() && !imagePreview && !audioData) return;
+        if (!text.trim() && !imagePreview && !audioData && !fileData) return;
         if (isSoundEnabled) playRandomKeyStrokeSound();
 
         sendMessage({
             text: text.trim(),
             image: imagePreview,
             audio: audioData,
+            file: fileData,
+            fileName: fileName,
+            fileSize: fileSize,
         });
         setText("");
         setImagePreview(null);
         setAudioData(null);
+        setFileData(null);
+        setFileName("");
+        setFileSize(0);
         setShowEmojiPicker(false);
         if (fileInputRef.current) fileInputRef.current.value = "";
+        if (fileAttachmentRef.current) fileAttachmentRef.current.value = "";
 
         if (socket && selectedUser) {
             socket.emit("stop_typing", selectedUser._id);
@@ -57,6 +68,41 @@ function MessageInput() {
         const reader = new FileReader();
         reader.onloadend = () => setImagePreview(reader.result);
         reader.readAsDataURL(file);
+    };
+
+    const handleFileAttachmentChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Max 10MB
+        if (file.size > 10 * 1024 * 1024) {
+            toast.error("Vui lòng chọn file có dung lượng dưới 10MB");
+            return;
+        }
+
+        setFileName(file.name);
+        setFileSize(file.size);
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setFileData(reader.result);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const removeFileAttachment = () => {
+        setFileData(null);
+        setFileName("");
+        setFileSize(0);
+        if (fileAttachmentRef.current) fileAttachmentRef.current.value = "";
+    };
+
+    const formatBytes = (bytes) => {
+        if (!bytes || bytes === 0) return "0 B";
+        const k = 1024;
+        const sizes = ["B", "KB", "MB", "GB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
     };
 
     const removeImage = () => {
@@ -200,6 +246,32 @@ function MessageInput() {
                 </div>
             )}
 
+            {fileData && (
+                <div className="max-w-3xl mx-auto mb-3 flex items-center">
+                    <div className="relative bg-slate-800 border border-slate-700 rounded-xl p-3 flex items-center gap-3 pr-8 shadow-sm">
+                        <div className="p-2 rounded-lg bg-cyan-500/10 text-cyan-400">
+                            <FileText className="w-5 h-5" />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-medium text-slate-200 truncate max-w-xs sm:max-w-sm">
+                                {fileName}
+                            </span>
+                            <span className="text-xs text-slate-400">
+                                {formatBytes(fileSize)}
+                            </span>
+                        </div>
+                        <button
+                            onClick={removeFileAttachment}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 hover:text-white hover:bg-red-500 transition-colors"
+                            type="button"
+                            title="Xóa tệp"
+                        >
+                            <XIcon className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto flex space-x-2 sm:space-x-4">
                 {isRecording ? (
                     <div className="flex-1 bg-slate-800/50 border border-red-500/50 rounded-lg py-2 px-4 flex items-center justify-between animate-pulse">
@@ -247,6 +319,14 @@ function MessageInput() {
                     className="hidden"
                 />
 
+                <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.7z"
+                    ref={fileAttachmentRef}
+                    onChange={handleFileAttachmentChange}
+                    className="hidden"
+                />
+
                 <div className="relative">
                     <button
                         type="button"
@@ -272,16 +352,29 @@ function MessageInput() {
 
                 <button
                     type="button"
+                    onClick={() => fileAttachmentRef.current?.click()}
+                    className={`bg-slate-800/50 text-slate-400 hover:text-slate-200 rounded-lg px-3 sm:px-4 transition-colors ${
+                        fileData ? "text-cyan-500" : ""
+                    }`}
+                    disabled={isRecording || audioData}
+                    title="Gửi tệp đính kèm (PDF, Word, Excel, ZIP...)"
+                >
+                    <Paperclip className="w-5 h-5" />
+                </button>
+
+                <button
+                    type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className={`bg-slate-800/50 text-slate-400 hover:text-slate-200 rounded-lg px-3 sm:px-4 transition-colors ${imagePreview ? "text-cyan-500" : ""
-                        }`}
+                    className={`bg-slate-800/50 text-slate-400 hover:text-slate-200 rounded-lg px-3 sm:px-4 transition-colors ${
+                        imagePreview ? "text-cyan-500" : ""
+                    }`}
                     disabled={isRecording || audioData}
                     title="Gửi hình ảnh"
                 >
                     <ImageIcon className="w-5 h-5" />
                 </button>
 
-                {!text.trim() && !imagePreview && !audioData && !isRecording ? (
+                {!text.trim() && !imagePreview && !audioData && !fileData && !isRecording ? (
                     <button
                         type="button"
                         onClick={startRecording}
@@ -292,7 +385,7 @@ function MessageInput() {
                 ) : (
                     <button
                         type="submit"
-                        disabled={(!text.trim() && !imagePreview && !audioData) || isRecording}
+                        disabled={(!text.trim() && !imagePreview && !audioData && !fileData) || isRecording}
                         className="bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-lg px-3 sm:px-4 py-2 font-medium hover:from-cyan-600 hover:to-cyan-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <SendIcon className="w-5 h-5" />

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, CheckCheck, Trash2, Reply, SmilePlus, Pin, PinOff, Pencil, ZoomIn, Copy } from "lucide-react";
+import { Check, CheckCheck, Trash2, Reply, SmilePlus, Pin, PinOff, Pencil, ZoomIn, Copy, Download, FileText, FileSpreadsheet, FileArchive, File } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import toast from "react-hot-toast";
@@ -127,6 +127,51 @@ function ChatContainer() {
         setEditingMessageId(null);
     };
 
+    const formatFileSize = (bytes) => {
+        if (!bytes || bytes === 0) return "0 B";
+        const k = 1024;
+        const sizes = ["B", "KB", "MB", "GB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+    };
+
+    const getFileIcon = (filename) => {
+        if (!filename) return <File className="w-5 h-5 text-slate-300" />;
+        const ext = filename.split(".").pop().toLowerCase();
+        if (["pdf"].includes(ext)) {
+            return <FileText className="w-5 h-5 text-red-400" />;
+        }
+        if (["doc", "docx", "txt"].includes(ext)) {
+            return <FileText className="w-5 h-5 text-blue-400" />;
+        }
+        if (["xls", "xlsx", "csv"].includes(ext)) {
+            return <FileSpreadsheet className="w-5 h-5 text-emerald-400" />;
+        }
+        if (["zip", "rar", "7z", "tar", "gz"].includes(ext)) {
+            return <FileArchive className="w-5 h-5 text-amber-400" />;
+        }
+        return <File className="w-5 h-5 text-slate-300" />;
+    };
+
+    const handleDownloadFile = async (url, filename) => {
+        if (!url) return;
+        try {
+            const res = await fetch(url);
+            const blob = await res.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = blobUrl;
+            a.download = filename || `file-${Date.now()}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(blobUrl);
+            toast.success("Đang tải file xuống...");
+        } catch (err) {
+            window.open(url, "_blank");
+        }
+    };
+
     const handleCopyText = (messageId, text) => {
         if (!text) return;
         navigator.clipboard.writeText(text).then(() => {
@@ -162,6 +207,8 @@ function ChatContainer() {
                                     pinnedMessage.text
                                 ) : pinnedMessage.image ? (
                                     <span className="italic">[Hình ảnh]</span>
+                                ) : pinnedMessage.fileUrl ? (
+                                    <span className="italic">[Tài liệu: {pinnedMessage.fileName || "Tệp đính kèm"}]</span>
                                 ) : (
                                     <span className="italic">[Tin nhắn thoại]</span>
                                 )}
@@ -320,6 +367,8 @@ function ChatContainer() {
                                                             msg.replyTo.text
                                                         ) : msg.replyTo.image ? (
                                                             <span className="italic">[Hình ảnh]</span>
+                                                        ) : msg.replyTo.fileUrl ? (
+                                                            <span className="italic">[Tài liệu: {msg.replyTo.fileName || "Tệp đính kèm"}]</span>
                                                         ) : (
                                                             <span className="italic">[Tin nhắn thoại]</span>
                                                         )}
@@ -346,6 +395,46 @@ function ChatContainer() {
                                             )}
                                             {msg.audio && (
                                                 <audio src={msg.audio} controls className="h-10 w-[200px]" />
+                                            )}
+                                            {msg.fileUrl && (
+                                                <div className={`mt-1 p-2.5 rounded-xl flex items-center justify-between gap-3 border shadow-sm ${
+                                                    msg.senderId === authUser._id 
+                                                        ? "bg-cyan-700/60 border-cyan-500/40 text-white" 
+                                                        : "bg-slate-900/80 border-slate-700/70 text-slate-200"
+                                                }`}>
+                                                    <div className="flex items-center gap-2.5 min-w-0">
+                                                        <div className={`p-2 rounded-lg ${
+                                                            msg.senderId === authUser._id ? "bg-cyan-800/80" : "bg-slate-800"
+                                                        }`}>
+                                                            {getFileIcon(msg.fileName)}
+                                                        </div>
+                                                        <div className="flex flex-col min-w-0">
+                                                            <span className="text-sm font-medium truncate max-w-[150px] sm:max-w-[210px]" title={msg.fileName}>
+                                                                {msg.fileName || "Tài liệu đính kèm"}
+                                                            </span>
+                                                            <span className="text-[11px] opacity-75">
+                                                                {formatFileSize(msg.fileSize)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    {msg.fileUrl === "uploading" ? (
+                                                        <span className="text-xs opacity-75 italic pr-1">Đang tải...</span>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleDownloadFile(msg.fileUrl, msg.fileName)}
+                                                            className={`p-1.5 rounded-lg transition-colors tooltip tooltip-left ${
+                                                                msg.senderId === authUser._id
+                                                                    ? "hover:bg-cyan-800 text-white"
+                                                                    : "hover:bg-slate-700 text-slate-300 hover:text-cyan-400"
+                                                            }`}
+                                                            data-tip="Tải về"
+                                                        >
+                                                            <Download className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             )}
                                             {editingMessageId === msg._id ? (
                                                 <div className="flex flex-col gap-2 min-w-[200px] sm:min-w-[260px] pt-1">
