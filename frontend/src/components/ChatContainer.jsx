@@ -390,14 +390,14 @@ function ChatContainer() {
                                 )}
                                 
                                 <div
-                                    className={`chat-bubble relative transition-all duration-300 ${
-                                        highlightedMessageId === msg._id ? "ring-2 ring-cyan-400 shadow-lg shadow-cyan-500/30" : ""
+                                    className={`chat-bubble relative transition-all duration-300 text-sm leading-relaxed ${
+                                        highlightedMessageId === msg._id ? "ring-2 ring-blue-400 shadow-lg shadow-blue-500/30" : ""
                                     } ${
                                         msg.isRevoked
-                                            ? "bg-slate-700/50 text-slate-400 border border-slate-700/50"
+                                            ? "bg-slate-800/60 text-slate-400 border border-slate-700/40"
                                             : msg.senderId === authUser._id
-                                                ? "bg-cyan-600 text-white"
-                                                : "bg-slate-800 text-slate-200"
+                                                ? "bg-blue-600 text-white shadow-sm"
+                                                : "bg-[#161d2d] text-slate-100 border border-slate-800/80"
                                     }`}
                                 >
                                     {msg.isPinned && !msg.isRevoked && (

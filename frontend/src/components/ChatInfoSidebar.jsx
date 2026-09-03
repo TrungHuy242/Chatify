@@ -74,9 +74,9 @@ function ChatInfoSidebar({ onClose, onPreviewImage, onScrollToMessage }) {
     };
 
     return (
-        <div className="w-80 bg-slate-900/90 border-l border-slate-700/60 flex flex-col h-full overflow-hidden flex-none animate-in slide-in-from-right-4 duration-200">
+        <div className="fixed inset-0 z-40 md:relative md:inset-auto w-full md:w-80 bg-[#0d121f] md:bg-[#0d121f]/95 border-l border-slate-800/80 flex flex-col h-full overflow-hidden flex-none animate-in slide-in-from-right-4 duration-200">
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700/60 min-h-[72px]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800/80 min-h-[68px]">
                 <h3 className="font-semibold text-slate-200 text-sm">Thông tin hội thoại</h3>
                 <button
                     onClick={onClose}

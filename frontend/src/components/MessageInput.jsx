@@ -281,7 +281,7 @@ function MessageInput() {
                 </div>
             )}
 
-            <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto flex space-x-2 sm:space-x-4">
+            <form onSubmit={handleSendMessage} className="w-full max-w-4xl mx-auto flex items-center space-x-1.5 sm:space-x-2">
                 {isRecording ? (
                     <div className="flex-1 bg-slate-800/50 border border-red-500/50 rounded-lg py-2 px-4 flex items-center justify-between animate-pulse">
                         <div className="flex items-center gap-2 text-red-400">
@@ -315,8 +315,8 @@ function MessageInput() {
                             }, 2000);
                         }
                     }}
-                    className="flex-1 bg-slate-800/50 border border-slate-700/50 rounded-lg py-2 px-4"
-                    placeholder="Type your message..."
+                    className="flex-1 bg-[#121826] border border-slate-800 rounded-xl py-2.5 px-3.5 sm:px-4 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30 transition-all"
+                    placeholder="Nhập tin nhắn của bạn..."
                 />
                 )}
 
@@ -340,15 +340,15 @@ function MessageInput() {
                     <button
                         type="button"
                         onClick={() => setShowEmojiPicker((prev) => !prev)}
-                        className={`bg-slate-800/50 rounded-lg px-3 sm:px-4 py-2 transition-colors flex items-center justify-center ${
+                        className={`rounded-xl p-2 sm:p-2.5 transition-all flex items-center justify-center border ${
                             showEmojiPicker
-                                ? "text-cyan-400 bg-slate-700/60"
-                                : "text-slate-400 hover:text-slate-200"
+                                ? "text-blue-400 bg-blue-500/10 border-blue-500/30"
+                                : "bg-[#121826] text-slate-400 hover:text-slate-200 border-slate-800 hover:border-slate-700"
                         }`}
                         disabled={isRecording}
                         title="Chọn biểu tượng cảm xúc"
                     >
-                        <Smile className="w-5 h-5" />
+                        <Smile className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
 
                     {showEmojiPicker && (
@@ -363,15 +363,15 @@ function MessageInput() {
                     <button
                         type="button"
                         onClick={() => setShowTimerMenu((prev) => !prev)}
-                        className={`rounded-lg px-2.5 sm:px-3 py-2 transition-colors flex items-center justify-center gap-1 text-xs font-medium ${
+                        className={`rounded-xl p-2 sm:px-2.5 sm:py-2.5 transition-all flex items-center justify-center gap-1 text-xs font-medium border ${
                             disappearingOption > 0
-                                ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
-                                : "bg-slate-800/50 text-slate-400 hover:text-slate-200"
+                                ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
+                                : "bg-[#121826] text-slate-400 hover:text-slate-200 border-slate-800 hover:border-slate-700"
                         }`}
                         disabled={isRecording}
                         title={disappearingOption > 0 ? `Tự hủy sau ${getTimerShortLabel(disappearingOption)}` : "Cài đặt tin nhắn tự hủy"}
                     >
-                        <Timer className="w-4 h-4" />
+                        <Timer className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
                         {disappearingOption > 0 && <span>{getTimerShortLabel(disappearingOption)}</span>}
                     </button>
 
@@ -411,42 +411,47 @@ function MessageInput() {
                 <button
                     type="button"
                     onClick={() => fileAttachmentRef.current?.click()}
-                    className={`bg-slate-800/50 text-slate-400 hover:text-slate-200 rounded-lg px-3 sm:px-4 transition-colors ${
-                        fileData ? "text-cyan-500" : ""
+                    className={`rounded-xl p-2 sm:p-2.5 transition-all border ${
+                        fileData
+                            ? "text-blue-400 bg-blue-500/10 border-blue-500/30"
+                            : "bg-[#121826] text-slate-400 hover:text-slate-200 border-slate-800 hover:border-slate-700"
                     }`}
                     disabled={isRecording || audioData}
                     title="Gửi tệp đính kèm (PDF, Word, Excel, ZIP...)"
                 >
-                    <Paperclip className="w-5 h-5" />
+                    <Paperclip className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
 
                 <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className={`bg-slate-800/50 text-slate-400 hover:text-slate-200 rounded-lg px-3 sm:px-4 transition-colors ${
-                        imagePreview ? "text-cyan-500" : ""
+                    className={`rounded-xl p-2 sm:p-2.5 transition-all border ${
+                        imagePreview
+                            ? "text-blue-400 bg-blue-500/10 border-blue-500/30"
+                            : "bg-[#121826] text-slate-400 hover:text-slate-200 border-slate-800 hover:border-slate-700"
                     }`}
                     disabled={isRecording || audioData}
                     title="Gửi hình ảnh"
                 >
-                    <ImageIcon className="w-5 h-5" />
+                    <ImageIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
 
                 {!text.trim() && !imagePreview && !audioData && !fileData && !isRecording ? (
                     <button
                         type="button"
                         onClick={startRecording}
-                        className="bg-slate-800/50 text-slate-400 hover:text-cyan-400 rounded-lg px-3 sm:px-4 transition-colors"
+                        className="bg-[#121826] text-slate-400 hover:text-blue-400 border border-slate-800 hover:border-slate-700 rounded-xl p-2 sm:p-2.5 transition-all"
+                        title="Ghi âm giọng nói"
                     >
-                        <Mic className="w-5 h-5" />
+                        <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                 ) : (
                     <button
                         type="submit"
                         disabled={(!text.trim() && !imagePreview && !audioData && !fileData) || isRecording}
-                        className="bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-lg px-3 sm:px-4 py-2 font-medium hover:from-cyan-600 hover:to-cyan-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl px-3.5 sm:px-4 py-2 sm:py-2.5 font-medium transition-all shadow-sm flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                     >
-                        <SendIcon className="w-5 h-5" />
+                        <SendIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                 )}
             </form>

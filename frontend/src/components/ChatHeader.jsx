@@ -1,4 +1,4 @@
-import { XIcon, SearchIcon, Info } from "lucide-react";
+import { XIcon, SearchIcon, Info, ChevronLeft } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 import { useEffect, useRef } from "react";
 import { useAuthStore } from "../store/useAuthStore";
@@ -49,25 +49,38 @@ function ChatHeader() {
     };
 
     return (
-        <div className="flex flex-col bg-slate-800/50 border-b border-slate-700/50 flex-none z-10">
-            <div className="flex justify-between items-center px-6 py-3 min-h-[72px]">
-                <div className="flex items-center space-x-3">
-                <div className={`avatar ${isOnline ? "online" : "offline"}`}>
-                    <div className="w-12 rounded-full">
-                        <img src={selectedUser.profilePic || "/avatar.png"} alt={selectedUser.fullName} />
+        <div className="flex flex-col bg-[#0e1322]/90 backdrop-blur-md border-b border-slate-800/80 flex-none z-10">
+            <div className="flex justify-between items-center px-4 sm:px-6 py-3 min-h-[68px]">
+                <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+                    <button
+                        onClick={() => setSelectedUser(null)}
+                        className="md:hidden p-1.5 -ml-1.5 rounded-full text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors"
+                        title="Quay lại danh sách"
+                    >
+                        <ChevronLeft className="w-5 h-5" />
+                    </button>
+
+                    <div className={`avatar ${isOnline ? "online" : "offline"} flex-shrink-0`}>
+                        <div className="w-10 sm:w-11 rounded-full ring-1 ring-slate-700/60">
+                            <img src={selectedUser.profilePic || "/avatar.png"} alt={selectedUser.fullName} />
+                        </div>
+                    </div>
+
+                    <div className="min-w-0">
+                        <h3 className="text-slate-100 font-semibold text-sm sm:text-base flex items-center gap-1.5 truncate">
+                            <span className="truncate">{displayName}</span>
+                            {displayName !== selectedUser.fullName && (
+                                <span className="text-xs text-slate-400 font-normal truncate hidden sm:inline">
+                                    ({selectedUser.fullName})
+                                </span>
+                            )}
+                        </h3>
+                        <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                            <span className={`size-1.5 rounded-full ${isOnline ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`}></span>
+                            <span>{isOnline ? "Đang hoạt động" : "Ngoại tuyến"}</span>
+                        </p>
                     </div>
                 </div>
-
-                <div>
-                    <h3 className="text-slate-200 font-medium flex items-center gap-1.5">
-                        <span>{displayName}</span>
-                        {displayName !== selectedUser.fullName && (
-                            <span className="text-xs text-slate-400 font-normal">({selectedUser.fullName})</span>
-                        )}
-                    </h3>
-                    <p className="text-slate-400 text-sm">{isOnline ? "Online" : "Offline"}</p>
-                </div>
-            </div>
 
             <div className="flex items-center space-x-2 sm:space-x-3">
                 <button 
